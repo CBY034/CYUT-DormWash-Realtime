@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>宿舍洗衣機即時看板</title>
+<style>
+:root{
+  /* 三態語意色（OKLCH） */
+  --idle-bg: oklch(0.93 0.07 155);
+  --idle-text: oklch(0.35 0.09 160);
+  --idle-btn: oklch(0.55 0.13 160);
+  --run-bg: oklch(0.58 0.21 27);
+  --run-text: oklch(0.98 0.01 90);
+  --fin-bg: oklch(0.90 0.14 95);
+  --fin-text: oklch(0.35 0.06 80);
+  --fin-btn: oklch(0.45 0.10 80);
+  --surface: oklch(0.97 0.005 240);
+  --ink: oklch(0.28 0.02 260);
+  --ink-2: oklch(0.5 0.02 260);
+  --radius: 14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family: "PingFang TC","Microsoft JhengHei","Noto Sans TC",ui-sans-serif,system-ui,sans-serif;
+  color:var(--ink);
+  background:var(--surface);
+  -webkit-font-smoothing:antialiased;
+  display:flex;flex-direction:column;
+  min-height:100dvh;
+}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+:focus-visible{outline:3px solid oklch(0.62 0.19 255);outline-offset:2px}
+
+/* ===== 頂部列 ===== */
+.topbar{
+  display:flex;align-items:center;gap:12px;
+  padding:8px 14px;min-height:48px;
+  background:oklch(0.99 0.003 240);
+  border-bottom:1px solid oklch(0.9 0.01 240);
+  flex:0 0 auto;
+}
+.topbar h1{font-size:17px;font-weight:700;line-height:1.2}
+.mode-badge{
+  font-size:12px;color:var(--ink-2);
+  border:1px solid oklch(0.85 0.02 240);border-radius:999px;
+  padding:2px 10px;white-space:nowrap;
+}
+.mode-badge.demo{color:oklch(0.5 0.12 80);border-color:oklch(0.8 0.1 85)}
+.topbar .spacer{flex:1}
+.switch-building{
+  font-size:14px;color:var(--ink);
+  border:1px solid oklch(0.85 0.02 240);border-radius:8px;
+  padding:8px 14px;min-height:44px;
+  transition:background .15s ease-out;
+}
+.switch-building:hover{background:oklch(0.94 0.01 240)}
+.switch-building:active{transform:scale(.97)}
+
+/* ===== 四宮格 ===== */
+.grid{
+  flex:1 1 auto;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  grid-template-rows:1fr 1fr;
+  gap:8px;
+  padding:8px;
+  min-height:0;
+}
+.tile{
+  position:relative;
+  border-radius:var(--radius);
+  display:flex;flex-direction:column;
+  padding:14px;
+  overflow:hidden;
+  transition:background .25s ease-out;
+  min-height:0;
+}
+.tile[data-status="idle"]{background:var(--idle-bg);color:var(--idle-text)}
+.tile[data-status="running"]{background:var(--run-bg);color:var(--run-text)}
+.tile[data-status="finished"]{background:var(--fin-bg);color:var(--fin-text)}
+
+.tile-label{
+  font-size:clamp(18px,2.6vw,26px);
+  font-weight:800;letter-spacing:.02em;
+  flex:0 0 auto;
+}
+.tile-label small{font-size:.55em;font-weight:600;opacity:.75;margin-left:.4em}
+.tile-body{
+  flex:1 1 auto;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;min-height:0;text-align:center;
+}
+.status-text{font-size:clamp(16px,2.2vw,22px);font-weight:600}
+.countdown{
+  font-size:clamp(34px,7vw,64px);
+  font-weight:800;line-height:1.1;
+  font-variant-numeric:tabular-nums;
+}
+.hint{font-size:clamp(13px,1.6vw,16px);opacity:.85}
+
+/* 主要動作按鈕（啟動 / 我已清空） */
+.big-action{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  width:100%;height:100%;
+  border-radius:10px;
+  transition:transform .12s ease-out, background .15s ease-out;
+}
+.big-action:active{transform:scale(.97)}
+.big-action .main{font-size:clamp(22px,3.4vw,34px);font-weight:800}
+.big-action .sub{font-size:clamp(14px,1.8vw,18px);opacity:.8}
+.tile[data-status="idle"] .big-action:hover{background:oklch(0.88 0.08 155)}
+
+.clear-btn{
+  background:var(--fin-btn);color:oklch(0.97 0.02 95);
+  font-size:clamp(20px,3vw,30px);font-weight:800;
+  padding:18px 40px;border-radius:12px;min-height:56px;
+  box-shadow:0 2px 8px oklch(0.4 0.08 80 / .35);
+  transition:transform .12s ease-out, box-shadow .15s ease-out;
+}
+.clear-btn:hover{box-shadow:0 4px 14px oklch(0.4 0.08 80 / .45)}
+.clear-btn:active{transform:scale(.96)}
+
+/* 展開的時間選項 */
+.options{
+  display:flex;flex-direction:column;gap:10px;width:100%;max-width:320px;
+}
+.option-btn{
+  background:var(--idle-btn);color:oklch(0.98 0.01 150);
+  font-size:clamp(17px,2.4vw,22px);font-weight:700;
+  padding:14px 16px;border-radius:10px;min-height:52px;
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+  transition:transform .12s ease-out, background .15s ease-out;
+}
+.option-btn:hover{background:oklch(0.5 0.13 160)}
+.option-btn:active{transform:scale(.97)}
+.option-btn .mins{font-size:.8em;opacity:.85;font-weight:600}
+.cancel-btn{
+  font-size:14px;opacity:.75;padding:10px;min-height:44px;
+  text-decoration:underline;
+}
+
+/* 脫水機運轉中的 +3 分鐘按鈕 */
+.add-time-btn{
+  background:oklch(0.98 0.01 90 / .18);
+  border:2px solid oklch(0.98 0.01 90 / .7);
+  color:var(--run-text);
+  font-size:clamp(16px,2.2vw,22px);font-weight:700;
+  padding:12px 28px;border-radius:999px;min-height:52px;
+  transition:background .15s ease-out, transform .12s ease-out;
+}
+.add-time-btn:hover{background:oklch(0.98 0.01 90 / .3)}
+.add-time-btn:active{transform:scale(.95)}
+
+/* 強制重置（群眾除錯） */
+.force-reset{
+  position:absolute;right:10px;bottom:10px;
+  font-size:12px;line-height:1;
+  padding:8px 12px;min-height:44px;min-width:44px;
+  display:inline-flex;align-items:center;justify-content:center;
+  border-radius:8px;
+  background:oklch(0 0 0 / .18);color:inherit;
+  opacity:.45;
+  transition:opacity .15s ease-out;
+}
+.force-reset:hover,.force-reset:focus-visible{opacity:.9}
+
+/* 重置回饋吐司 */
+.toast{
+  position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
+  background:oklch(0.3 0.02 260);color:oklch(0.97 0.005 240);
+  padding:12px 22px;border-radius:10px;font-size:15px;font-weight:600;
+  opacity:0;pointer-events:none;
+  transition:opacity .2s ease-out, transform .2s ease-out;
+  z-index:40;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ===== 選擇棟別畫面 ===== */
+.building-screen{
+  position:fixed;inset:0;z-index:30;
+  background:var(--surface);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:14px;padding:24px;
+}
+.building-screen[hidden]{display:none}
+.building-screen h2{font-size:clamp(24px,4vw,34px);font-weight:800;margin-bottom:8px}
+.building-screen p{color:var(--ink-2);font-size:15px;margin-bottom:12px}
+.building-btn{
+  width:min(420px,100%);
+  background:oklch(0.99 0.003 240);
+  border:2px solid oklch(0.85 0.02 240);
+  border-radius:var(--radius);
+  padding:26px 20px;min-height:56px;
+  font-size:clamp(20px,3vw,26px);font-weight:800;
+  transition:border-color .15s ease-out, transform .12s ease-out, background .15s ease-out;
+}
+.building-btn:hover{border-color:var(--idle-btn);background:oklch(0.96 0.03 155)}
+.building-btn:active{transform:scale(.98)}
+.building-btn small{display:block;font-size:13px;font-weight:500;color:var(--ink-2);margin-top:4px}
+
+@media (max-width:480px){
+  .grid{gap:6px;padding:6px}
+  .tile{padding:10px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <h1 id="app-title">洗衣看板</h1>
+  <span class="mode-badge" id="mode-badge">連線中…</span>
+  <span class="spacer"></span>
+  <button class="switch-building" id="switch-building" type="button">切換棟別</button>
+</header>
+
+<main class="grid" id="grid" aria-live="polite"></main>
+
+<div class="building-screen" id="building-screen" hidden>
+  <h2>選擇你的棟別</h2>
+  <p>選擇後會記住，下次開啟直接進入看板</p>
+  <div id="building-list" style="display:flex;flex-direction:column;gap:14px;width:100%;align-items:center"></div>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script type="module">
+/* =====================================================================
+ * 宿舍洗衣機即時看板
+ * 無伺服器架構：Firebase Realtime Database 即時同步 + 前端獨立倒數
+ * ===================================================================== */
+
+/* ---------- 1. Firebase 設定 ---------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyAM8mbNa0bSMJjil_iUc64l4tac-T7MVw4",
+  authDomain: "dorm-laundry-c42ae.firebaseapp.com",
+  databaseURL: "https://dorm-laundry-c42ae-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "dorm-laundry-c42ae",
+  storageBucket: "dorm-laundry-c42ae.firebasestorage.app",
+  messagingSenderId: "879787145129",
+  appId: "1:879787145129:web:240716111aac07283d36b8"
+};
+const FIREBASE_READY = firebaseConfig.apiKey !== "" && firebaseConfig.apiKey !== "YOUR_API_KEY";
+
+/* ---------- 2. 常數 ---------- */
+const BUILDINGS = [
+  { id: "A_building", label: "A 棟" },
+  { id: "B_building", label: "B 棟" }
+];
+const MACHINES = [
+  { id: "wash_1", label: "洗 1", type: "washer",  typeLabel: "洗衣機" },
+  { id: "wash_2", label: "洗 2", type: "washer",  typeLabel: "洗衣機" },
+  { id: "dry_1",  label: "烘 1", type: "dryer",   typeLabel: "烘衣機" },
+  { id: "spin_1", label: "脫 1", type: "spinner", typeLabel: "脫水機" }
+];
+const TIME_OPTIONS = {
+  washer: [
+    { label: "一般", minutes: 37 },
+    { label: "精緻", minutes: 35 },
+    { label: "免燙", minutes: 36 }
+  ],
+  dryer: [
+    { label: "標準", minutes: 40 }
+  ]
+};
+const SPIN_STEP_MIN = 3;          // 脫水機每次點擊 +3 分鐘
+const OVERTIME_MS  = 15 * 60 * 1000; // finished 超過 15 分鐘自動回 idle
+const LS_BUILDING  = "laundry_building";
+const LS_DEMO_DB   = "laundry_demo_db";
+const FINISHED_TEXT = { washer: "已洗完，待取衣", dryer: "已烘完，待取衣", spinner: "已脫完，待取衣" };
+
+/* ---------- 3. 後端介面（Firebase 或本機示範模式，對 UI 完全透明） ---------- */
+function emptyMachine(type){ return { type, status: "idle", startTime: 0, duration: 0, endTime: 0 }; }
+
+function createDemoBackend(){
+  const readAll = () => { try { return JSON.parse(localStorage.getItem(LS_DEMO_DB)) || {}; } catch { return {}; } };
+  const writeAll = (d) => {
+    localStorage.setItem(LS_DEMO_DB, JSON.stringify(d));
+    window.dispatchEvent(new CustomEvent("demo-db-change"));
+  };
+  return {
+    mode: "demo",
+    subscribe(buildingId, cb){
+      const emit = () => cb(readAll()[buildingId] || null);
+      window.addEventListener("demo-db-change", emit);
+      window.addEventListener("storage", emit); // 跨分頁同步
+      emit();
+    },
+    write(buildingId, machineId, fields){
+      const all = readAll();
+      all[buildingId] = all[buildingId] || {};
+      all[buildingId][machineId] = { ...emptyMachine(machineId.startsWith("spin") ? "spinner" : machineId.startsWith("dry") ? "dryer" : "washer"),
+                                     ...(all[buildingId][machineId] || {}), ...fields };
+      writeAll(all);
+    }
+  };
+}
+
+async function createFirebaseBackend(){
+  const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
+  const { getDatabase, ref, onValue, update } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
+  const db = getDatabase(initializeApp(firebaseConfig));
+  return {
+    mode: "firebase",
+    subscribe(buildingId, cb){
+      onValue(ref(db, buildingId), (snap) => cb(snap.val()));
+    },
+    write(buildingId, machineId, fields){
+      update(ref(db, `${buildingId}/${machineId}`), fields);
+    }
+  };
+}
+
+/* ---------- 4. 應用程式狀態 ---------- */
+const backend = FIREBASE_READY ? await createFirebaseBackend() : createDemoBackend();
+let currentBuilding = localStorage.getItem(LS_BUILDING) || null;
+let machinesData = {};      // 最新同步資料 { machineId: {...} }
+let pendingTimers = {};     // 防止重複寫入 finished / idle
+let openOptionsFor = null;  // 目前展開時間選項的機台
+
+/* ---------- 5. DOM ---------- */
+const grid = document.getElementById("grid");
+const buildingScreen = document.getElementById("building-screen");
+const buildingList = document.getElementById("building-list");
+const toast = document.getElementById("toast");
+let toastTimer = null;
+
+function showToast(msg){
+  toast.textContent = msg;
+  toast.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove("show"), 2000);
+}
+
+/* ---------- 6. 建立四宮格 ---------- */
+const tileEls = {};
+for (const m of MACHINES){
+  const tile = document.createElement("section");
+  tile.className = "tile";
+  tile.dataset.status = "idle";
+  tile.dataset.machine = m.id;
+
+  const label = document.createElement("div");
+  label.className = "tile-label";
+  label.innerHTML = `${m.label}<small>${m.typeLabel}</small>`;
+
+  const body = document.createElement("div");
+  body.className = "tile-body";
+
+  const reset = document.createElement("button");
+  reset.type = "button";
+  reset.className = "force-reset";
+  reset.textContent = "強制重置";
+  reset.setAttribute("aria-label", `${m.label} 強制重置`);
+  reset.addEventListener("click", () => {
+    writeMachine(m.id, { status: "idle", startTime: 0, duration: 0, endTime: 0 });
+    showToast(`${m.label} 已重置為空閒`);
+  });
+
+  tile.append(label, body, reset);
+  grid.appendChild(tile);
+  tileEls[m.id] = { tile, body, meta: m };
+}
+
+/* ---------- 7. 渲染 ---------- */
+function fmtRemaining(ms){
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  return `${String(Math.floor(s / 60)).padStart(2, "0")} 分 ${String(s % 60).padStart(2, "0")} 秒`;
+}
+
+function render(){
+  for (const m of MACHINES){
+    const d = machinesData[m.id] || emptyMachine(m.type);
+    const { tile, body } = tileEls[m.id];
+    tile.dataset.status = d.status;
+    body.replaceChildren();
+
+    if (d.status === "running"){
+      const txt = document.createElement("div");
+      txt.className = "status-text";
+      txt.textContent = "運轉中";
+      const cd = document.createElement("div");
+      cd.className = "countdown";
+      cd.dataset.countdownFor = m.id;
+      cd.textContent = `剩餘 ${fmtRemaining(d.endTime - Date.now())}`;
+      body.append(txt, cd);
+      if (m.type === "spinner"){
+        const add = document.createElement("button");
+        add.type = "button";
+        add.className = "add-time-btn";
+        add.textContent = `+${SPIN_STEP_MIN} 分鐘`;
+        add.addEventListener("click", () => addSpinTime(m.id));
+        const hint = document.createElement("div");
+        hint.className = "hint";
+        hint.textContent = "點擊可累加時間";
+        body.append(add, hint);
+      }
+    } else if (d.status === "finished"){
+      const txt = document.createElement("div");
+      txt.className = "status-text";
+      txt.style.fontSize = "clamp(20px,3vw,30px)";
+      txt.style.fontWeight = "800";
+      txt.textContent = FINISHED_TEXT[m.type];
+      const clear = document.createElement("button");
+      clear.type = "button";
+      clear.className = "clear-btn";
+      clear.textContent = "我已清空";
+      clear.addEventListener("click", () => {
+        writeMachine(m.id, { status: "idle", startTime: 0, duration: 0, endTime: 0 });
+        showToast(`${m.label} 已清空，回到空閒`);
+      });
+      body.append(txt, clear);
+    } else { // idle
+      if (openOptionsFor === m.id && TIME_OPTIONS[m.type]){
+        const box = document.createElement("div");
+        box.className = "options";
+        for (const opt of TIME_OPTIONS[m.type]){
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "option-btn";
+          b.innerHTML = `<span>${opt.label}</span><span class="mins">${opt.minutes} 分鐘</span>`;
+          b.addEventListener("click", () => startMachine(m.id, opt.minutes * 60));
+          box.appendChild(b);
+        }
+        const cancel = document.createElement("button");
+        cancel.type = "button";
+        cancel.className = "cancel-btn";
+        cancel.textContent = "取消";
+        cancel.addEventListener("click", () => { openOptionsFor = null; render(); });
+        box.appendChild(cancel);
+        body.appendChild(box);
+      } else {
+        const action = document.createElement("button");
+        action.type = "button";
+        action.className = "big-action";
+        action.innerHTML = `<span class="main">空閒中</span><span class="sub">${m.type === "spinner" ? `點擊啟動 +${SPIN_STEP_MIN} 分鐘` : "點擊啟動"}</span>`;
+        action.setAttribute("aria-label", `${m.label} 啟動`);
+        action.addEventListener("click", () => {
+          if (m.type === "spinner"){
+            startMachine(m.id, SPIN_STEP_MIN * 60);
+          } else {
+            openOptionsFor = m.id;
+            render();
+          }
+        });
+        body.appendChild(action);
+      }
+    }
+  }
+}
+
+/* ---------- 8. 寫入動作 ---------- */
+function writeMachine(machineId, fields){
+  backend.write(currentBuilding, machineId, fields);
+}
+
+function startMachine(machineId, seconds){
+  const now = Date.now();
+  writeMachine(machineId, { status: "running", startTime: now, duration: seconds, endTime: now + seconds * 1000 });
+  openOptionsFor = null;
+}
+
+function addSpinTime(machineId){
+  const d = machinesData[machineId];
+  if (!d || d.status !== "running") return;
+  writeMachine(machineId, {
+    duration: (d.duration || 0) + SPIN_STEP_MIN * 60,
+    endTime: (d.endTime || Date.now()) + SPIN_STEP_MIN * 60 * 1000
+  });
+  showToast(`已累加 ${SPIN_STEP_MIN} 分鐘`);
+}
+
+/* ---------- 9. 前端獨立倒數 + 超時防呆 ---------- */
+setInterval(() => {
+  if (!currentBuilding) return;
+  const now = Date.now();
+  for (const m of MACHINES){
+    const d = machinesData[m.id];
+    if (!d) continue;
+    // 每秒更新倒數文字
+    if (d.status === "running"){
+      const cd = tileEls[m.id].body.querySelector(`[data-countdown-for="${m.id}"]`);
+      if (cd) cd.textContent = `剩餘 ${fmtRemaining(d.endTime - now)}`;
+      // 時間到 → 前端主動標記 finished（每台機器只觸發一次）
+      if (now >= d.endTime && !pendingTimers[m.id]){
+        pendingTimers[m.id] = true;
+        writeMachine(m.id, { status: "finished" });
+        setTimeout(() => delete pendingTimers[m.id], 5000);
+      }
+    }
+    // 超時防呆：finished 超過 endTime 15 分鐘 → 自動回 idle
+    if (d.status === "finished" && now > d.endTime + OVERTIME_MS && !pendingTimers[m.id]){
+      pendingTimers[m.id] = true;
+      writeMachine(m.id, { status: "idle", startTime: 0, duration: 0, endTime: 0 });
+      setTimeout(() => delete pendingTimers[m.id], 5000);
+    }
+  }
+}, 1000);
+
+/* ---------- 10. 棟別選擇與訂閱 ---------- */
+let unsubscribeNote = null;
+function enterBuilding(buildingId){
+  currentBuilding = buildingId;
+  localStorage.setItem(LS_BUILDING, buildingId);
+  const b = BUILDINGS.find(x => x.id === buildingId);
+  document.getElementById("app-title").textContent = `${b ? b.label : buildingId} 洗衣看板`;
+  document.title = `${b ? b.label : buildingId} 洗衣看板`;
+  buildingScreen.hidden = true;
+  openOptionsFor = null;
+  backend.subscribe(buildingId, (data) => {
+    machinesData = data || {};
+    render();
+  });
+}
+
+function showBuildingScreen(){
+  buildingScreen.hidden = false;
+}
+
+for (const b of BUILDINGS){
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "building-btn";
+  btn.innerHTML = `${b.label}<small>${b.id}</small>`;
+  btn.addEventListener("click", () => enterBuilding(b.id));
+  buildingList.appendChild(btn);
+}
+
+document.getElementById("switch-building").addEventListener("click", showBuildingScreen);
+
+/* ---------- 11. 啟動 ---------- */
+const badge = document.getElementById("mode-badge");
+if (backend.mode === "firebase"){
+  badge.textContent = "Firebase 即時同步";
+} else {
+  badge.textContent = "示範模式（未設定 Firebase）";
+  badge.classList.add("demo");
+  badge.title = "在 index.html 填入 firebaseConfig 即可啟用即時同步";
+}
+
+if (currentBuilding && BUILDINGS.some(b => b.id === currentBuilding)){
+  enterBuilding(currentBuilding);
+} else {
+  showBuildingScreen();
+}
+render();
+</script>
+</body>
+</html>
