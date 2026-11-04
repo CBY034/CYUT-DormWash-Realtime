@@ -763,7 +763,6 @@ function enterBuilding(bId){
   document.getElementById("building-screen").hidden = true;
   backend.subscribe(bId, (data) => { machinesData = data || {}; render(); });
 }
-
 const bList = document.getElementById("building-list");
 for (const b of BUILDINGS){
   const btn = document.createElement("button");
