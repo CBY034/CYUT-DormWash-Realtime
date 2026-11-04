@@ -108,7 +108,7 @@ html, body {
 /* 頂部導覽列 */
 .topbar {
   display: flex; align-items: center; justify-content: space-between;
-  padding: clamp(12px, 2.2vh, 18px) clamp(12px, 3vw, 20px);
+  padding: clamp(10px, 2vh, 16px) clamp(12px, 3vw, 20px);
   background: #ffffff;
   border-bottom: 2px solid var(--border-color);
   flex: 0 0 auto;
@@ -119,40 +119,45 @@ html, body {
 
 .brand { display: flex; align-items: center; gap: 8px; }
 .brand-icon {
-  width: clamp(24px, 4.5vw, 30px);
-  height: clamp(24px, 4.5vw, 30px);
+  width: clamp(22px, 4vw, 28px);
+  height: clamp(22px, 4vw, 28px);
   color: #2563eb;
   flex-shrink: 0;
 }
 
+.title-group { display: flex; flex-direction: column; }
 .topbar h1 {
-  font-size: clamp(20px, 3.5vw, 26px);
+  font-size: clamp(18px, 3vw, 22px);
   font-weight: 900;
   letter-spacing: -0.03em;
   white-space: nowrap;
   background: linear-gradient(135deg, #0f172a 0%, #2563eb 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  line-height: 1.1;
 }
 
-.topbar-right { display: flex; align-items: center; gap: 8px; }
+.user-tag {
+  font-size: 11px; font-weight: 700; color: #475569;
+}
 
-/* 連線 / 離線 狀態指示 */
+.topbar-right { display: flex; align-items: center; gap: 6px; }
+
+/* 連線 / 離線 / 唯讀 狀態指示 */
 .badge {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: clamp(11px, 1.6vw, 13px);
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: clamp(10px, 1.4vw, 12px);
   font-weight: 800;
   color: #065f46;
   background: #d1fae5;
-  padding: 5px 12px;
+  padding: 4px 10px;
   border-radius: 999px;
   border: 1.5px solid #6ee7b7;
   white-space: nowrap;
   box-shadow: 0 2px 6px rgba(16, 185, 129, 0.15);
-  transition: all 0.3s ease;
 }
 .status-dot {
-  width: 8px; height: 8px;
+  width: 7px; height: 7px;
   border-radius: 50%;
   background-color: #10b981;
   box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
@@ -165,28 +170,22 @@ html, body {
   100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
-.badge.offline {
-  color: #475569;
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-  box-shadow: none;
-}
-.badge.offline .status-dot {
-  background-color: #94a3b8;
-  animation: none;
-}
+.badge.offline { color: #475569; background: #f1f5f9; border-color: #cbd5e1; box-shadow: none; }
+.badge.offline .status-dot { background-color: #94a3b8; animation: none; }
+
+.badge.readonly-mode { color: #b45309; background: #fffbeb; border-color: #fcd34d; box-shadow: none; }
+.badge.readonly-mode .status-dot { background-color: #f59e0b; animation: none; }
 
 .switch-btn {
-  font-size: clamp(11px, 1.5vw, 13px);
+  font-size: clamp(11px, 1.4vw, 12px);
   font-weight: 700;
   color: #2563eb;
   background: #eff6ff;
   border: 1.5px solid #bfdbfe;
-  padding: clamp(5px, 1vh, 7px) clamp(10px, 2vw, 14px);
-  border-radius: 10px;
+  padding: 4px 10px;
+  border-radius: 8px;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.15s ease;
 }
 .switch-btn:active { background: #dbeafe; }
 
@@ -250,6 +249,18 @@ html, body {
   white-space: nowrap;
 }
 
+/* 使用者房號標籤 */
+.room-badge {
+  display: inline-block;
+  font-size: clamp(11px, 2.5cqw, 13px);
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-top: 4px;
+}
+.room-badge.running { background: #ffe4e6; color: #e11d48; border: 1px solid #fca5a5; }
+.room-badge.finished { background: #fef3c7; color: #d97706; border: 1px solid #fcd34d; }
+
 .card-body {
   flex: 1;
   display: flex;
@@ -288,19 +299,16 @@ html, body {
 }
 
 .status-box {
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
 }
 .status-icon {
-  width: clamp(24px, 7cqw, 36px);
-  height: clamp(24px, 7cqw, 36px);
+  width: clamp(24px, 6cqw, 32px);
+  height: clamp(24px, 6cqw, 32px);
   color: var(--fin-color);
 }
-.status-icon.idle {
-  color: var(--idle-color);
-  opacity: 0.9;
-}
+.status-icon.idle { color: var(--idle-color); opacity: 0.9; }
 
-.status-label { font-size: clamp(15px, 4.2cqw, 20px); font-weight: 900; white-space: nowrap; }
+.status-label { font-size: clamp(14px, 4cqw, 18px); font-weight: 900; white-space: nowrap; }
 .card[data-status="idle"] .status-label { color: var(--idle-color); }
 .card[data-status="finished"] .status-label { color: var(--fin-color); }
 
@@ -314,7 +322,7 @@ html, body {
   text-overflow: ellipsis;
 }
 
-/* 懸浮彈窗 (Modal Card) */
+/* 懸浮彈窗 (底部抽屜操作 Modal) */
 .sheet-overlay {
   position: absolute; inset: 0; background: rgba(15, 23, 42, 0.4);
   backdrop-filter: blur(4px); z-index: 100; opacity: 0; pointer-events: none;
@@ -352,10 +360,43 @@ html, body {
   white-space: nowrap;
 }
 .btn-action:active { transform: scale(0.98); }
+.btn-action:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
 .btn-primary { background: #10b981; color: #ffffff; }
 .btn-warning { background: #f59e0b; color: #ffffff; }
 .btn-secondary { background: #f1f5f9; color: var(--text-main); border: 1px solid var(--border-color); }
 .btn-danger { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; }
+
+/* 替換原本 alert() 的「螢幕正中央」通用提示彈窗 */
+.custom-alert-overlay {
+  position: absolute; inset: 0; background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px); z-index: 400; opacity: 0; pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.custom-alert-overlay.active { opacity: 1; pointer-events: auto; }
+
+.custom-alert-modal {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  width: calc(100% - 48px); max-width: 340px; min-width: 280px;
+  background: #ffffff; border-radius: 20px; padding: 20px;
+  z-index: 401; opacity: 0; pointer-events: none;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+  display: flex; flex-direction: column; gap: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.22); border: 1px solid var(--border-color);
+  text-align: center;
+}
+.custom-alert-modal.active {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1; pointer-events: auto;
+}
+.custom-alert-title { font-size: 17px; font-weight: 900; color: #0f172a; }
+.custom-alert-body { font-size: 13px; font-weight: 600; color: #475569; line-height: 1.5; white-space: pre-line; }
+.custom-alert-btn {
+  width: 100%; height: 42px; background: #2563eb; color: #ffffff;
+  border: none; border-radius: 12px; font-size: 15px; font-weight: 800; cursor: pointer;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+.custom-alert-btn:active { transform: scale(0.98); }
 
 /* Toast 提示 */
 .toast {
@@ -366,21 +407,61 @@ html, body {
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-/* 選擇棟別畫面 */
+/* 身份與棟別設定畫面 */
 .screen {
   position: absolute; inset: 0; background: var(--bg-app); z-index: 300;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 20px; gap: 14px; min-width: 320px;
+  padding: 20px; gap: 12px; min-width: 320px; overflow-y: auto;
 }
 .screen[hidden] { display: none; }
-.screen h2 { font-size: clamp(20px, 4vw, 26px); font-weight: 900; white-space: nowrap; }
-.screen p { color: var(--text-sub); font-size: clamp(12px, 2vw, 14px); font-weight: 600; white-space: nowrap; }
-.btn-building {
-  width: min(320px, 100%); background: #ffffff; border: 2px solid var(--border-color);
-  border-radius: 16px; padding: 14px; font-size: clamp(16px, 3vw, 18px); font-weight: 900;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.03); cursor: pointer; text-align: center; white-space: nowrap;
+.screen h2 { font-size: clamp(18px, 3.5vw, 22px); font-weight: 900; white-space: nowrap; }
+.screen p { color: var(--text-sub); font-size: 12px; font-weight: 600; text-align: center; margin-top: -6px; }
+
+.form-group {
+  width: min(340px, 100%); display: flex; flex-direction: column; gap: 6px;
 }
-.btn-building:active { transform: scale(0.98); }
+.form-label { font-size: 12px; font-weight: 800; color: #334155; }
+
+/* 輸入框前綴膠囊組合 */
+.input-with-prefix {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+}
+.prefix-badge {
+  height: 42px; padding: 0 14px; background: #2563eb; color: #ffffff;
+  font-weight: 900; font-size: 15px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
+}
+
+.form-input {
+  flex: 1; height: 42px; padding: 0 12px; border-radius: 10px;
+  border: 2px solid var(--border-color); font-size: 15px; font-weight: 800;
+  outline: none; transition: border-color 0.2s; letter-spacing: 1px;
+}
+.form-input:focus { border-color: #2563eb; }
+
+/* 17 棟別響應式多欄網格 */
+.building-select-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+  gap: 6px; width: 100%; max-height: 180px; overflow-y: auto; padding: 2px;
+}
+.btn-select-b {
+  height: 38px; border-radius: 8px; border: 2px solid var(--border-color);
+  background: #ffffff; font-size: 13px; font-weight: 800; cursor: pointer;
+  transition: all 0.12s ease;
+}
+.btn-select-b.active {
+  border-color: #2563eb; background: #eff6ff; color: #2563eb;
+}
+
+.btn-submit {
+  width: min(340px, 100%); height: 44px; background: #2563eb; color: #ffffff;
+  border: none; border-radius: 12px; font-size: 15px; font-weight: 800;
+  cursor: pointer; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+  margin-top: 4px;
+}
+.btn-submit:active { transform: scale(0.98); }
 </style>
 </head>
 <body>
@@ -401,14 +482,17 @@ html, body {
         <circle cx="12" cy="14" r="4"></circle>
         <path d="M12 12a2 2 0 0 0 2 2"></path>
       </svg>
-      <h1 id="app-title">洗好沒</h1>
+      <div class="title-group">
+        <h1 id="app-title">洗好沒</h1>
+        <span class="user-tag" id="user-profile-tag">未設定房號</span>
+      </div>
     </div>
     <div class="topbar-right">
       <span class="badge" id="mode-badge">
         <span class="status-dot"></span>
         <span class="status-text">連線</span>
       </span>
-      <button class="switch-btn" id="switch-building-btn">切換棟別</button>
+      <button class="switch-btn" id="switch-building-btn">切換/設定</button>
     </div>
   </header>
 
@@ -421,12 +505,35 @@ html, body {
     <div class="sheet-actions" id="sheet-actions"></div>
   </div>
 
+  <!-- 自訂螢幕正中央通用 Alert 彈窗 -->
+  <div class="custom-alert-overlay" id="custom-alert-overlay"></div>
+  <div class="custom-alert-modal" id="custom-alert-modal">
+    <div class="custom-alert-title" id="custom-alert-title">提示訊息</div>
+    <div class="custom-alert-body" id="custom-alert-body">內容</div>
+    <button class="custom-alert-btn" id="custom-alert-btn">確定</button>
+  </div>
+
   <div class="toast" id="toast"></div>
 
-  <div class="screen" id="building-screen" hidden>
-    <h2>選擇宿舍棟別</h2>
-    <p>選擇後會記憶於手機，下次自動載入</p>
-    <div id="building-list" style="width:100%; display:flex; flex-direction:column; align-items:center; gap:10px;"></div>
+  <!-- 身份設定面板 -->
+  <div class="screen" id="profile-screen" hidden>
+    <h2>歡迎使用 洗好沒</h2>
+    <p>請先點選您的棟別，並輸入戶樓號床（例：111-1）</p>
+    
+    <div class="form-group">
+      <label class="form-label">1. 選擇住宿棟別</label>
+      <div class="building-select-grid" id="b-select-grid"></div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">2. 輸入戶樓號-床 (例：111-1)</label>
+      <div class="input-with-prefix">
+        <span class="prefix-badge" id="prefix-badge">A 棟</span>
+        <input type="text" class="form-input" id="room-input" placeholder="111-1" maxlength="6">
+      </div>
+    </div>
+
+    <button class="btn-submit" id="save-profile-btn">進入系統</button>
   </div>
 </div>
 
@@ -443,11 +550,10 @@ const firebaseConfig = {
 };
 const FIREBASE_READY = firebaseConfig.apiKey !== "";
 
-/* ---------- 2. 常數與設定 ---------- */
+/* ---------- 2. 常數與 17 棟別設定 ---------- */
 const BUILDINGS = [
-  { id: "A_building", label: "A 棟宿舍" },
-  { id: "B_building", label: "B 棟宿舍" }
-];
+  "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "O", "Q", "R", "S"
+].map(code => ({ id: `${code}_building`, code, label: `${code} 棟` }));
 
 const MACHINES = [
   {
@@ -484,27 +590,32 @@ const TIME_OPTIONS = {
   ]
 };
 const OVERTIME_MS = 15 * 60 * 1000;
-const LS_BUILDING = "laundry_building";
+const LS_BUILDING = "laundry_user_building";
+const LS_ROOM     = "laundry_user_room";
 const LS_DEMO_DB  = "laundry_demo_db";
 
-/* ---------- 3. 伺服器時間校正核心 (解決裝置時間落差) ---------- */
-let serverTimeOffset = 0; // 伺服器時間與本機時間的毫秒差距
+/* ---------- 3. 伺服器時間校正與使用者狀態 ---------- */
+let serverTimeOffset = 0;
+let userBuilding = localStorage.getItem(LS_BUILDING) || null;
+let userRoom     = localStorage.getItem(LS_ROOM) || null;
+let viewBuilding = userBuilding || "A_building";
 
-function getNow() {
-  return Date.now() + serverTimeOffset; // 取得全網統一的 Firebase 雲端時間
-}
+function getNow() { return Date.now() + serverTimeOffset; }
 
-/* ---------- 4. 連線狀態更新控制 ---------- */
+/* ---------- 4. 連線與權限狀態指示 ---------- */
 const badge = document.getElementById("mode-badge");
 const statusText = badge.querySelector(".status-text");
 
 function updateStatus(isOnline){
-  if (isOnline) {
-    statusText.textContent = "連線";
-    badge.classList.remove("offline");
-  } else {
+  if (!isOnline) {
     statusText.textContent = "離線";
-    badge.classList.add("offline");
+    badge.className = "badge offline";
+  } else if (viewBuilding !== userBuilding) {
+    statusText.textContent = "唯讀 (跨棟)";
+    badge.className = "badge readonly-mode";
+  } else {
+    statusText.textContent = "連線";
+    badge.className = "badge";
   }
 }
 
@@ -512,7 +623,7 @@ window.addEventListener("online", () => updateStatus(true));
 window.addEventListener("offline", () => updateStatus(false));
 
 /* ---------- 5. 後端連線適配器 ---------- */
-function emptyMachine(type){ return { type, status: "idle", startTime: 0, duration: 0, endTime: 0 }; }
+function emptyMachine(type){ return { type, status: "idle", startTime: 0, duration: 0, endTime: 0, room: "" }; }
 
 function createDemoBackend(){
   const readAll = () => { try { return JSON.parse(localStorage.getItem(LS_DEMO_DB)) || {}; } catch { return {}; } };
@@ -538,32 +649,24 @@ async function createFirebaseBackend(){
   const { getDatabase, ref, onValue, update } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
   const db = getDatabase(initializeApp(firebaseConfig));
   
-  // 1. 監聽連線狀態
-  const connectedRef = ref(db, ".info/connected");
-  onValue(connectedRef, (snap) => {
-    updateStatus(snap.val() === true && navigator.onLine);
-  });
+  onValue(ref(db, ".info/connected"), (snap) => updateStatus(snap.val() === true && navigator.onLine));
+  onValue(ref(db, ".info/serverTimeOffset"), (snap) => { serverTimeOffset = snap.val() || 0; });
 
-  // 2. 監聽並計算 Firebase 伺服器時間補償值 (關鍵對齊邏輯)
-  const offsetRef = ref(db, ".info/serverTimeOffset");
-  onValue(offsetRef, (snap) => {
-    serverTimeOffset = snap.val() || 0;
-  });
-
+  let unsubscribe = null;
   return {
     mode: "firebase",
-    subscribe(bId, cb){ onValue(ref(db, bId), (snap) => cb(snap.val())); },
+    subscribe(bId, cb){
+      if (unsubscribe) unsubscribe();
+      unsubscribe = onValue(ref(db, bId), (snap) => cb(snap.val()));
+    },
     write(bId, mId, fields){ update(ref(db, `${bId}/${mId}`), fields); }
   };
 }
 
-/* ---------- 6. 全域狀態 ---------- */
+/* ---------- 6. 全域變數與彈窗控制 ---------- */
 const backend = FIREBASE_READY ? await createFirebaseBackend() : createDemoBackend();
-let currentBuilding = localStorage.getItem(LS_BUILDING) || null;
 let machinesData = {};
-let activeMachineId = null;
 
-/* ---------- 7. DOM 元素與 Toast ---------- */
 const grid = document.getElementById("grid");
 const sheetOverlay = document.getElementById("sheet-overlay");
 const sheet = document.getElementById("sheet");
@@ -572,19 +675,40 @@ const sheetSubtitle = document.getElementById("sheet-subtitle");
 const sheetActions = document.getElementById("sheet-actions");
 const toast = document.getElementById("toast");
 
+// 置中通用 Alert 彈窗
+const alertOverlay = document.getElementById("custom-alert-overlay");
+const alertModal   = document.getElementById("custom-alert-modal");
+const alertTitle   = document.getElementById("custom-alert-title");
+const alertBody    = document.getElementById("custom-alert-body");
+const alertBtn     = document.getElementById("custom-alert-btn");
+
+function showAlertModal(title, message){
+  alertTitle.textContent = title;
+  alertBody.textContent  = message;
+  alertOverlay.classList.add("active");
+  alertModal.classList.add("active");
+}
+
+function closeAlertModal(){
+  alertOverlay.classList.remove("active");
+  alertModal.classList.remove("active");
+}
+
+alertBtn.addEventListener("click", closeAlertModal);
+alertOverlay.addEventListener("click", closeAlertModal);
+
 function showToast(msg){
   toast.textContent = msg; toast.classList.add("show");
-  setTimeout(() => toast.classList.remove("show"), 2000);
+  setTimeout(() => toast.classList.remove("show"), 2200);
 }
 
 function closeSheet(){
   sheetOverlay.classList.remove("active");
   sheet.classList.remove("active");
-  activeMachineId = null;
 }
 sheetOverlay.addEventListener("click", closeSheet);
 
-/* ---------- 8. 建立卡片 ---------- */
+/* ---------- 7. 建立機台卡片 ---------- */
 const cardEls = {};
 for (const m of MACHINES){
   const card = document.createElement("div");
@@ -608,20 +732,22 @@ for (const m of MACHINES){
   cardEls[m.id] = { card, meta: m };
 }
 
-/* ---------- 9. 渲染介面 ---------- */
+/* ---------- 8. 渲染介面 ---------- */
 function fmtRemaining(ms){
   const s = Math.max(0, Math.ceil(ms / 1000));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
 function render(){
-  const now = getNow(); // 使用雲端校正後的時間
+  const now = getNow();
   for (const m of MACHINES){
     const d = machinesData[m.id] || emptyMachine(m.type);
     const { card } = cardEls[m.id];
     const body = document.getElementById(`body-${m.id}`);
     const footer = document.getElementById(`footer-${m.id}`);
     card.dataset.status = d.status;
+
+    const displayRoom = d.room || "未標示房號";
 
     if (d.status === "running"){
       const totalMs = (d.duration || 1) * 1000;
@@ -638,16 +764,18 @@ function render(){
           </svg>
           <div class="time-display">${fmtRemaining(remainMs)}</div>
         </div>
+        <span class="room-badge running">${displayRoom}</span>
       `;
-      footer.textContent = "運轉中・點擊設定";
+      footer.textContent = `${displayRoom} 運轉中`;
     } else if (d.status === "finished"){
       body.innerHTML = `
         <div class="status-box">
           <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
           <div class="status-label">已洗完</div>
+          <span class="room-badge finished">${displayRoom}</span>
         </div>
       `;
-      footer.textContent = "待清空・點擊釋出";
+      footer.textContent = `${displayRoom} 待清空`;
     } else {
       body.innerHTML = `
         <div class="status-box">
@@ -660,32 +788,42 @@ function render(){
   }
 }
 
-/* ---------- 10. 彈窗 (Modal Card) 邏輯 ---------- */
+/* ---------- 9. 彈窗與權限校驗 ---------- */
 function openSheetFor(m){
-  activeMachineId = m.id;
   const d = machinesData[m.id] || emptyMachine(m.type);
   sheetTitle.textContent = `${m.label} (${m.typeLabel})`;
   sheetActions.innerHTML = "";
 
+  const canControl = (viewBuilding === userBuilding);
+
+  if (!canControl) {
+    sheetSubtitle.textContent = `⚠️ 您登記為 ${userBuilding ? userBuilding.replace('_building','') + '棟' : ''}，僅能瀏覽此機台`;
+  } else if (d.status === "idle"){
+    sheetSubtitle.textContent = `將以 ${userRoom} 房號啟動機台：`;
+  } else if (d.status === "running"){
+    sheetSubtitle.textContent = `${d.room || '未知'} 使用中，剩餘 ${fmtRemaining(d.endTime - getNow())}`;
+  } else if (d.status === "finished"){
+    sheetSubtitle.textContent = `${d.room || '未知'} 衣服已洗完，請確認取回：`;
+  }
+
   if (d.status === "idle"){
-    sheetSubtitle.textContent = "選擇運轉模式：";
     for (const opt of TIME_OPTIONS[m.type]){
       const btn = document.createElement("button");
       btn.className = "btn-action btn-primary";
+      btn.disabled = !canControl;
       btn.innerHTML = `<span>${opt.label}</span><span>${opt.minutes} 分鐘</span>`;
       btn.onclick = () => {
         startMachine(m.id, opt.minutes * 60);
         closeSheet();
-        showToast(`${m.label} 已啟動 (${opt.minutes}分)`);
+        showToast(`${userRoom} 已啟動 ${m.label} (${opt.minutes}分)`);
       };
       sheetActions.appendChild(btn);
     }
   } else if (d.status === "running"){
-    sheetSubtitle.textContent = `運轉中，剩餘 ${fmtRemaining(d.endTime - getNow())}`;
-    
     if (m.type === "spinner"){
       const addBtn = document.createElement("button");
       addBtn.className = "btn-action btn-primary";
+      addBtn.disabled = !canControl;
       addBtn.innerHTML = `<span>投入 5 元累加時間</span><span>+3 分鐘</span>`;
       addBtn.onclick = () => { addSpinTime(m.id); closeSheet(); };
       sheetActions.appendChild(addBtn);
@@ -693,30 +831,30 @@ function openSheetFor(m){
 
     const resetBtn = document.createElement("button");
     resetBtn.className = "btn-action btn-danger";
-    resetBtn.innerHTML = `<span>現場空機？強制重置</span>`;
+    resetBtn.disabled = !canControl;
+    resetBtn.innerHTML = `<span>現場空機？強制重置釋出</span>`;
     resetBtn.onclick = () => {
-      writeMachine(m.id, { status: "idle", startTime: 0, duration: 0, endTime: 0 });
+      writeMachine(m.id, { status: "idle", startTime: 0, duration: 0, endTime: 0, room: "" });
       closeSheet();
-      showToast(`${m.label} 已強制重置`);
+      showToast(`${m.label} 已重置歸還空閒`);
     };
     sheetActions.appendChild(resetBtn);
   } else if (d.status === "finished"){
-    sheetSubtitle.textContent = "衣服已洗完，確認取回：";
-
     const clearBtn = document.createElement("button");
     clearBtn.className = "btn-action btn-warning";
-    clearBtn.innerHTML = `<span>我已拿走衣物，釋出機台</span>`;
+    clearBtn.disabled = !canControl;
+    clearBtn.innerHTML = `<span>已取走衣物，釋出機台</span>`;
     clearBtn.onclick = () => {
-      writeMachine(m.id, { status: "idle", startTime: 0, duration: 0, endTime: 0 });
+      writeMachine(m.id, { status: "idle", startTime: 0, duration: 0, endTime: 0, room: "" });
       closeSheet();
-      showToast(`${m.label} 已歸還空閒`);
+      showToast(`${m.label} 已釋出為空閒`);
     };
     sheetActions.appendChild(clearBtn);
   }
 
   const cancelBtn = document.createElement("button");
   cancelBtn.className = "btn-action btn-secondary";
-  cancelBtn.innerHTML = `<span style="width:100%; text-align:center;">取消</span>`;
+  cancelBtn.innerHTML = `<span style="width:100%; text-align:center;">取消 / 關閉</span>`;
   cancelBtn.onclick = closeSheet;
   sheetActions.appendChild(cancelBtn);
 
@@ -724,12 +862,18 @@ function openSheetFor(m){
   sheet.classList.add("active");
 }
 
-/* ---------- 11. 資料寫入與倒數迴圈 ---------- */
-function writeMachine(mId, fields){ backend.write(currentBuilding, mId, fields); }
+/* ---------- 10. 資料寫入與倒數計時 ---------- */
+function writeMachine(mId, fields){ backend.write(viewBuilding, mId, fields); }
 
 function startMachine(mId, seconds){
-  const now = getNow(); // 使用雲端校正後的時間寫入倒數
-  writeMachine(mId, { status: "running", startTime: now, duration: seconds, endTime: now + seconds * 1000 });
+  const now = getNow();
+  writeMachine(mId, {
+    status: "running",
+    startTime: now,
+    duration: seconds,
+    endTime: now + seconds * 1000,
+    room: userRoom || "未登記"
+  });
 }
 
 function addSpinTime(mId){
@@ -742,44 +886,117 @@ function addSpinTime(mId){
 }
 
 setInterval(() => {
-  if (!currentBuilding) return;
-  const now = getNow(); // 使用雲端校正後的時間進行計時判斷
+  if (!viewBuilding) return;
+  const now = getNow();
   for (const m of MACHINES){
     const d = machinesData[m.id]; if (!d) continue;
     if (d.status === "running" && now >= d.endTime){
       writeMachine(m.id, { status: "finished" });
     }
     if (d.status === "finished" && now > d.endTime + OVERTIME_MS){
-      writeMachine(m.id, { status: "idle", startTime: 0, duration: 0, endTime: 0 });
+      writeMachine(m.id, { status: "idle", startTime: 0, duration: 0, endTime: 0, room: "" });
     }
   }
   render();
 }, 1000);
 
-/* ---------- 12. 棟別選擇與初始化 ---------- */
-function enterBuilding(bId){
-  currentBuilding = bId;
-  localStorage.setItem(LS_BUILDING, bId);
-  document.getElementById("building-screen").hidden = true;
+/* ---------- 11. 17 棟別選擇與房號正則嚴格比對 ---------- */
+function switchViewBuilding(bId){
+  viewBuilding = bId;
+  updateStatus(navigator.onLine);
   backend.subscribe(bId, (data) => { machinesData = data || {}; render(); });
 }
-const bList = document.getElementById("building-list");
-for (const b of BUILDINGS){
-  const btn = document.createElement("button");
-  btn.className = "btn-building";
-  btn.textContent = b.label;
-  btn.onclick = () => enterBuilding(b.id);
-  bList.appendChild(btn);
+
+function updateTopProfileDisplay(){
+  const tag = document.getElementById("user-profile-tag");
+  if (userBuilding && userRoom) {
+    tag.textContent = `${userRoom}`;
+  } else {
+    tag.textContent = "未設定身份";
+  }
 }
 
-document.getElementById("switch-building-btn").onclick = () => {
-  document.getElementById("building-screen").hidden = false;
+let tempSelectedBuilding = userBuilding || "A_building";
+const bSelectGrid = document.getElementById("b-select-grid");
+const prefixBadge = document.getElementById("prefix-badge");
+
+function renderBuildingSelectBtns(){
+  bSelectGrid.innerHTML = "";
+  for (const b of BUILDINGS){
+    const btn = document.createElement("button");
+    btn.className = `btn-select-b ${tempSelectedBuilding === b.id ? 'active' : ''}`;
+    btn.textContent = b.code;
+    btn.onclick = () => {
+      tempSelectedBuilding = b.id;
+      prefixBadge.textContent = `${b.code} 棟`;
+      renderBuildingSelectBtns();
+    };
+    bSelectGrid.appendChild(btn);
+  }
+  const currB = BUILDINGS.find(b=>b.id===tempSelectedBuilding);
+  prefixBadge.textContent = `${currB ? currB.code : 'A'} 棟`;
+}
+
+// 嚴格驗證 [戶1-2][樓1-5][號1-6]-[床1-2] (例: 111-1)
+function validateAndParseRoom(rawInput, selectedBId){
+  let val = rawInput.trim();
+  
+  // 自動容錯：若輸入 1111 自動幫補橫線變 111-1
+  if (/^[1-2][1-5][1-6][1-2]$/.test(val)) {
+    val = `${val.slice(0, 3)}-${val.slice(3)}`;
+    document.getElementById("room-input").value = val;
+  }
+
+  // 嚴格正則比對：[戶1-2][樓1-5][號1-6]-[床1-2]
+  const isValid = /^[1-2][1-5][1-6]-[1-2]$/.test(val);
+  if (!isValid) return null;
+
+  const bCode = selectedBId.replace('_building', '');
+  return `${bCode}${val}`; // 組合成完整標誌如 A111-1
+}
+
+document.getElementById("save-profile-btn").onclick = () => {
+  const roomInputVal = document.getElementById("room-input").value;
+  const fullRoomStr = validateAndParseRoom(roomInputVal, tempSelectedBuilding);
+  
+  if (!fullRoomStr) {
+    const selectedBCode = tempSelectedBuilding.replace('_building', '');
+    showAlertModal(
+      "房號格式不正確！", 
+      "請輸入正確房號      例：111-1"
+    );
+    return;
+  }
+
+  userBuilding = tempSelectedBuilding;
+  userRoom     = fullRoomStr;
+
+  localStorage.setItem(LS_BUILDING, userBuilding);
+  localStorage.setItem(LS_ROOM, userRoom);
+
+  updateTopProfileDisplay();
+  switchViewBuilding(userBuilding);
+  document.getElementById("profile-screen").hidden = true;
+  showToast(`身份已鎖定：${userRoom}`);
 };
 
-if (currentBuilding && BUILDINGS.some(b => b.id === currentBuilding)){
-  enterBuilding(currentBuilding);
+document.getElementById("switch-building-btn").onclick = () => {
+  tempSelectedBuilding = userBuilding || "A_building";
+  if (userRoom) {
+    const code = tempSelectedBuilding.replace('_building', '');
+    document.getElementById("room-input").value = userRoom.startsWith(code) ? userRoom.replace(code, '') : userRoom;
+  }
+  renderBuildingSelectBtns();
+  document.getElementById("profile-screen").hidden = false;
+};
+
+// 系統初始化
+renderBuildingSelectBtns();
+if (userBuilding && userRoom) {
+  updateTopProfileDisplay();
+  switchViewBuilding(userBuilding);
 } else {
-  document.getElementById("building-screen").hidden = false;
+  document.getElementById("profile-screen").hidden = false;
 }
 </script>
 </body>
