@@ -3,236 +3,435 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>宿舍洗衣機即時看板</title>
+<title>洗好沒</title>
 <style>
-:root{
-  /* 三態語意色（OKLCH） */
-  --idle-bg: oklch(0.93 0.07 155);
-  --idle-text: oklch(0.35 0.09 160);
-  --idle-btn: oklch(0.55 0.13 160);
-  --run-bg: oklch(0.58 0.21 27);
-  --run-text: oklch(0.98 0.01 90);
-  --fin-bg: oklch(0.90 0.14 95);
-  --fin-text: oklch(0.35 0.06 80);
-  --fin-btn: oklch(0.45 0.10 80);
-  --surface: oklch(0.97 0.005 240);
-  --ink: oklch(0.28 0.02 260);
-  --ink-2: oklch(0.5 0.02 260);
-  --radius: 14px;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%}
-body{
-  font-family: "PingFang TC","Microsoft JhengHei","Noto Sans TC",ui-sans-serif,system-ui,sans-serif;
-  color:var(--ink);
-  background:var(--surface);
-  -webkit-font-smoothing:antialiased;
-  display:flex;flex-direction:column;
-  min-height:100dvh;
-}
-button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
-:focus-visible{outline:3px solid oklch(0.62 0.19 255);outline-offset:2px}
+:root {
+  --bg-desktop: #cbd5e1;
+  --bg-app: #f0fdf4;
+  --card-bg: #ffffff;
+  --text-main: #0f172a;
+  --text-sub: #64748b;
+  --border-color: #cbd5e1;
 
-/* ===== 頂部列 ===== */
-.topbar{
-  display:flex;align-items:center;gap:12px;
-  padding:8px 14px;min-height:48px;
-  background:oklch(0.99 0.003 240);
-  border-bottom:1px solid oklch(0.9 0.01 240);
-  flex:0 0 auto;
-}
-.topbar h1{font-size:17px;font-weight:700;line-height:1.2}
-.mode-badge{
-  font-size:12px;color:var(--ink-2);
-  border:1px solid oklch(0.85 0.02 240);border-radius:999px;
-  padding:2px 10px;white-space:nowrap;
-}
-.mode-badge.demo{color:oklch(0.5 0.12 80);border-color:oklch(0.8 0.1 85)}
-.topbar .spacer{flex:1}
-.switch-building{
-  font-size:14px;color:var(--ink);
-  border:1px solid oklch(0.85 0.02 240);border-radius:8px;
-  padding:8px 14px;min-height:44px;
-  transition:background .15s ease-out;
-}
-.switch-building:hover{background:oklch(0.94 0.01 240)}
-.switch-building:active{transform:scale(.97)}
+  /* 狀態語意色 */
+  --idle-color: #10b981;
+  --idle-bg: #ecfdf5;
+  --idle-border: #6ee7b7;
 
-/* ===== 四宮格 ===== */
-.grid{
-  flex:1 1 auto;
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  grid-template-rows:1fr 1fr;
-  gap:8px;
-  padding:8px;
-  min-height:0;
-}
-.tile{
-  position:relative;
-  border-radius:var(--radius);
-  display:flex;flex-direction:column;
-  padding:14px;
-  overflow:hidden;
-  transition:background .25s ease-out;
-  min-height:0;
-}
-.tile[data-status="idle"]{background:var(--idle-bg);color:var(--idle-text)}
-.tile[data-status="running"]{background:var(--run-bg);color:var(--run-text)}
-.tile[data-status="finished"]{background:var(--fin-bg);color:var(--fin-text)}
+  --run-color: #f43f5e;
+  --run-bg: #fff1f2;
+  --run-border: #fca5a5;
 
-.tile-label{
-  font-size:clamp(18px,2.6vw,26px);
-  font-weight:800;letter-spacing:.02em;
-  flex:0 0 auto;
-}
-.tile-label small{font-size:.55em;font-weight:600;opacity:.75;margin-left:.4em}
-.tile-body{
-  flex:1 1 auto;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:12px;min-height:0;text-align:center;
-}
-.status-text{font-size:clamp(16px,2.2vw,22px);font-weight:600}
-.countdown{
-  font-size:clamp(34px,7vw,64px);
-  font-weight:800;line-height:1.1;
-  font-variant-numeric:tabular-nums;
-}
-.hint{font-size:clamp(13px,1.6vw,16px);opacity:.85}
+  --fin-color: #d97706;
+  --fin-bg: #fffbeb;
+  --fin-border: #fcd34d;
 
-/* 主要動作按鈕（啟動 / 我已清空） */
-.big-action{
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-  width:100%;height:100%;
-  border-radius:10px;
-  transition:transform .12s ease-out, background .15s ease-out;
-}
-.big-action:active{transform:scale(.97)}
-.big-action .main{font-size:clamp(22px,3.4vw,34px);font-weight:800}
-.big-action .sub{font-size:clamp(14px,1.8vw,18px);opacity:.8}
-.tile[data-status="idle"] .big-action:hover{background:oklch(0.88 0.08 155)}
-
-.clear-btn{
-  background:var(--fin-btn);color:oklch(0.97 0.02 95);
-  font-size:clamp(20px,3vw,30px);font-weight:800;
-  padding:18px 40px;border-radius:12px;min-height:56px;
-  box-shadow:0 2px 8px oklch(0.4 0.08 80 / .35);
-  transition:transform .12s ease-out, box-shadow .15s ease-out;
-}
-.clear-btn:hover{box-shadow:0 4px 14px oklch(0.4 0.08 80 / .45)}
-.clear-btn:active{transform:scale(.96)}
-
-/* 展開的時間選項 */
-.options{
-  display:flex;flex-direction:column;gap:10px;width:100%;max-width:320px;
-}
-.option-btn{
-  background:var(--idle-btn);color:oklch(0.98 0.01 150);
-  font-size:clamp(17px,2.4vw,22px);font-weight:700;
-  padding:14px 16px;border-radius:10px;min-height:52px;
-  display:flex;justify-content:space-between;align-items:center;gap:8px;
-  transition:transform .12s ease-out, background .15s ease-out;
-}
-.option-btn:hover{background:oklch(0.5 0.13 160)}
-.option-btn:active{transform:scale(.97)}
-.option-btn .mins{font-size:.8em;opacity:.85;font-weight:600}
-.cancel-btn{
-  font-size:14px;opacity:.75;padding:10px;min-height:44px;
-  text-decoration:underline;
+  --radius-card: clamp(14px, 3cqw, 24px);
+  --shadow-app: 0 20px 40px -15px rgba(0, 0, 0, 0.08);
 }
 
-/* 脫水機運轉中的 +3 分鐘按鈕 */
-.add-time-btn{
-  background:oklch(0.98 0.01 90 / .18);
-  border:2px solid oklch(0.98 0.01 90 / .7);
-  color:var(--run-text);
-  font-size:clamp(16px,2.2vw,22px);font-weight:700;
-  padding:12px 28px;border-radius:999px;min-height:52px;
-  transition:background .15s ease-out, transform .12s ease-out;
+/* 全局防文字崩潰設定 */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  word-break: keep-all;
 }
-.add-time-btn:hover{background:oklch(0.98 0.01 90 / .3)}
-.add-time-btn:active{transform:scale(.95)}
 
-/* 強制重置（群眾除錯） */
-.force-reset{
-  position:absolute;right:10px;bottom:10px;
-  font-size:12px;line-height:1;
-  padding:8px 12px;min-height:44px;min-width:44px;
-  display:inline-flex;align-items:center;justify-content:center;
-  border-radius:8px;
-  background:oklch(0 0 0 / .18);color:inherit;
-  opacity:.45;
-  transition:opacity .15s ease-out;
+html, body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-desktop);
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-font-smoothing: antialiased;
+  
+  /* 全局硬性極限保護 */
+  min-width: 320px;
+  min-height: 480px;
+  overflow: auto;
 }
-.force-reset:hover,.force-reset:focus-visible{opacity:.9}
 
-/* 重置回饋吐司 */
-.toast{
-  position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
-  background:oklch(0.3 0.02 260);color:oklch(0.97 0.005 240);
-  padding:12px 22px;border-radius:10px;font-size:15px;font-weight:600;
-  opacity:0;pointer-events:none;
-  transition:opacity .2s ease-out, transform .2s ease-out;
-  z-index:40;
+/* 主面板容器 */
+.app-container {
+  width: 100%;
+  max-width: 680px;
+  min-width: 320px;
+  height: 100dvh;
+  min-height: 480px;
+  background-color: var(--bg-app);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: var(--shadow-app);
+  overflow: hidden;
+  flex-shrink: 0;
+  margin: auto;
 }
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-/* ===== 選擇棟別畫面 ===== */
-.building-screen{
-  position:fixed;inset:0;z-index:30;
-  background:var(--surface);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:14px;padding:24px;
+@media (min-width: 681px) and (min-height: 520px) {
+  .app-container {
+    height: calc(100dvh - 32px);
+    max-height: 900px;
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.9);
+  }
 }
-.building-screen[hidden]{display:none}
-.building-screen h2{font-size:clamp(24px,4vw,34px);font-weight:800;margin-bottom:8px}
-.building-screen p{color:var(--ink-2);font-size:15px;margin-bottom:12px}
-.building-btn{
-  width:min(420px,100%);
-  background:oklch(0.99 0.003 240);
-  border:2px solid oklch(0.85 0.02 240);
-  border-radius:var(--radius);
-  padding:26px 20px;min-height:56px;
-  font-size:clamp(20px,3vw,26px);font-weight:800;
-  transition:border-color .15s ease-out, transform .12s ease-out, background .15s ease-out;
-}
-.building-btn:hover{border-color:var(--idle-btn);background:oklch(0.96 0.03 155)}
-.building-btn:active{transform:scale(.98)}
-.building-btn small{display:block;font-size:13px;font-weight:500;color:var(--ink-2);margin-top:4px}
 
-@media (max-width:480px){
-  .grid{gap:6px;padding:6px}
-  .tile{padding:10px}
+/* 背景動態水氣泡 */
+.bg-bubbles {
+  position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0;
 }
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.bubble {
+  position: absolute; border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(56, 189, 248, 0.15));
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  animation: float-bubble 10s infinite linear;
+}
+.b1 { width: 36px; height: 36px; left: 8%; bottom: -40px; animation-duration: 11s; animation-delay: 0s; }
+.b2 { width: 22px; height: 22px; left: 28%; bottom: -30px; animation-duration: 8s; animation-delay: 3s; }
+.b3 { width: 44px; height: 44px; left: 72%; bottom: -50px; animation-duration: 13s; animation-delay: 1s; }
+.b4 { width: 28px; height: 28px; left: 88%; bottom: -30px; animation-duration: 9.5s; animation-delay: 4.5s; }
+
+@keyframes float-bubble {
+  0% { transform: translateY(0) scale(1); opacity: 0; }
+  20% { opacity: 0.65; }
+  80% { opacity: 0.65; }
+  100% { transform: translateY(-700px) scale(1.25); opacity: 0; }
+}
+
+/* 頂部導覽列 */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: clamp(12px, 2.2vh, 18px) clamp(12px, 3vw, 20px);
+  background: #ffffff;
+  border-bottom: 2px solid var(--border-color);
+  flex: 0 0 auto;
+  gap: 8px;
+  min-width: 320px;
+  z-index: 10;
+}
+
+.brand { display: flex; align-items: center; gap: 8px; }
+.brand-icon {
+  width: clamp(24px, 4.5vw, 30px);
+  height: clamp(24px, 4.5vw, 30px);
+  color: #2563eb;
+  flex-shrink: 0;
+}
+
+.topbar h1 {
+  font-size: clamp(20px, 3.5vw, 26px);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+  background: linear-gradient(135deg, #0f172a 0%, #2563eb 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+
+/* 連線 / 離線 狀態指示 */
+.badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: clamp(11px, 1.6vw, 13px);
+  font-weight: 800;
+  color: #065f46;
+  background: #d1fae5;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1.5px solid #6ee7b7;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.15);
+  transition: all 0.3s ease;
+}
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background-color: #10b981;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.badge.offline {
+  color: #475569;
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  box-shadow: none;
+}
+.badge.offline .status-dot {
+  background-color: #94a3b8;
+  animation: none;
+}
+
+.switch-btn {
+  font-size: clamp(11px, 1.5vw, 13px);
+  font-weight: 700;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1.5px solid #bfdbfe;
+  padding: clamp(5px, 1vh, 7px) clamp(10px, 2vw, 14px);
+  border-radius: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+.switch-btn:active { background: #dbeafe; }
+
+/* 四宮格容器 */
+.grid {
+  container-type: inline-size;
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: clamp(8px, 2cqw, 14px);
+  padding: clamp(8px, 2cqw, 14px);
+  min-height: 0;
+  min-width: 320px;
+  z-index: 5;
+}
+
+/* 卡片元件 */
+.card {
+  position: relative;
+  background: var(--card-bg);
+  border-radius: var(--radius-card);
+  border: 2px solid var(--border-color);
+  padding: clamp(10px, 2.2cqw, 16px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
+  min-height: 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+}
+.card:active { transform: scale(0.97); }
+
+.card[data-status="idle"] { border-color: var(--idle-border); background: var(--idle-bg); }
+.card[data-status="running"] { border-color: var(--run-border); background: var(--run-bg); }
+.card[data-status="finished"] { border-color: var(--fin-border); background: var(--fin-bg); }
+
+.card-header { display: flex; justify-content: space-between; align-items: center; gap: 4px; }
+.card-title-group { display: flex; align-items: center; gap: 6px; }
+
+.m-icon {
+  width: clamp(20px, 5cqw, 26px);
+  height: clamp(20px, 5cqw, 26px);
+  flex-shrink: 0;
+}
+.card[data-status="idle"] .m-icon { color: var(--idle-color); }
+.card[data-status="running"] .m-icon { color: var(--run-color); }
+.card[data-status="finished"] .m-icon { color: var(--fin-color); }
+
+.card-title { font-size: clamp(16px, 4.8cqw, 22px); font-weight: 900; letter-spacing: -0.03em; white-space: nowrap; }
+.card-type {
+  font-size: clamp(10px, 2.3cqw, 12px);
+  font-weight: 800;
+  padding: 2px clamp(4px, 1cqw, 6px);
+  border-radius: 6px;
+  background: rgba(255,255,255,0.9);
+  color: var(--text-sub);
+  border: 1px solid rgba(0,0,0,0.06);
+  white-space: nowrap;
+}
+
+.card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-height: 0;
+}
+
+.ring-container {
+  position: relative;
+  width: clamp(48px, 15cqw, 90px);
+  height: clamp(48px, 15cqw, 90px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ring-svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+.ring-bg { stroke: rgba(0, 0, 0, 0.06); stroke-width: 8; fill: none; }
+.ring-progress {
+  stroke: var(--run-color);
+  stroke-width: 8;
+  fill: none;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear;
+}
+
+.time-display {
+  position: absolute;
+  font-size: clamp(12px, 3.6cqw, 18px);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: var(--run-color);
+  white-space: nowrap;
+}
+
+.status-box {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+}
+.status-icon {
+  width: clamp(24px, 7cqw, 36px);
+  height: clamp(24px, 7cqw, 36px);
+  color: var(--fin-color);
+}
+.status-icon.idle {
+  color: var(--idle-color);
+  opacity: 0.9;
+}
+
+.status-label { font-size: clamp(15px, 4.2cqw, 20px); font-weight: 900; white-space: nowrap; }
+.card[data-status="idle"] .status-label { color: var(--idle-color); }
+.card[data-status="finished"] .status-label { color: var(--fin-color); }
+
+.card-footer {
+  font-size: clamp(10px, 2.2cqw, 12px);
+  font-weight: 700;
+  color: var(--text-sub);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 懸浮彈窗 (Modal Card) */
+.sheet-overlay {
+  position: absolute; inset: 0; background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px); z-index: 100; opacity: 0; pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.sheet-overlay.active { opacity: 1; pointer-events: auto; }
+
+.sheet {
+  position: absolute;
+  left: 50%; bottom: 16px;
+  transform: translateX(-50%) translateY(120%);
+  width: calc(100% - 24px);
+  max-width: 400px;
+  min-width: 280px;
+  background: #ffffff;
+  border-radius: 20px;
+  padding: clamp(12px, 3vw, 16px);
+  z-index: 101;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex; flex-direction: column; gap: 8px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  border: 1px solid var(--border-color);
+}
+.sheet.active { transform: translateX(-50%) translateY(0); }
+
+.sheet-title { font-size: clamp(15px, 2.5vw, 18px); font-weight: 800; text-align: center; white-space: nowrap; }
+.sheet-subtitle { font-size: clamp(11px, 2vw, 13px); font-weight: 600; color: var(--text-sub); text-align: center; margin-top: -4px; white-space: nowrap; }
+
+.sheet-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.btn-action {
+  width: 100%; min-height: 40px; padding: 8px 14px; border-radius: 12px;
+  font-size: clamp(12px, 2vw, 14px); font-weight: 700; border: none; cursor: pointer;
+  display: flex; justify-content: space-between; align-items: center;
+  transition: transform 0.12s ease;
+  white-space: nowrap;
+}
+.btn-action:active { transform: scale(0.98); }
+.btn-primary { background: #10b981; color: #ffffff; }
+.btn-warning { background: #f59e0b; color: #ffffff; }
+.btn-secondary { background: #f1f5f9; color: var(--text-main); border: 1px solid var(--border-color); }
+.btn-danger { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; }
+
+/* Toast 提示 */
+.toast {
+  position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%) translateY(20px);
+  background: #0f172a; color: #ffffff; padding: 8px 18px; border-radius: 999px;
+  font-size: 12px; font-weight: 700; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  opacity: 0; pointer-events: none; transition: all 0.25s ease; z-index: 200; white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* 選擇棟別畫面 */
+.screen {
+  position: absolute; inset: 0; background: var(--bg-app); z-index: 300;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 20px; gap: 14px; min-width: 320px;
+}
+.screen[hidden] { display: none; }
+.screen h2 { font-size: clamp(20px, 4vw, 26px); font-weight: 900; white-space: nowrap; }
+.screen p { color: var(--text-sub); font-size: clamp(12px, 2vw, 14px); font-weight: 600; white-space: nowrap; }
+.btn-building {
+  width: min(320px, 100%); background: #ffffff; border: 2px solid var(--border-color);
+  border-radius: 16px; padding: 14px; font-size: clamp(16px, 3vw, 18px); font-weight: 900;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03); cursor: pointer; text-align: center; white-space: nowrap;
+}
+.btn-building:active { transform: scale(0.98); }
 </style>
 </head>
 <body>
 
-<header class="topbar">
-  <h1 id="app-title">洗衣看板</h1>
-  <span class="mode-badge" id="mode-badge">連線中…</span>
-  <span class="spacer"></span>
-  <button class="switch-building" id="switch-building" type="button">切換棟別</button>
-</header>
+<div class="app-container">
+  <div class="bg-bubbles">
+    <div class="bubble b1"></div>
+    <div class="bubble b2"></div>
+    <div class="bubble b3"></div>
+    <div class="bubble b4"></div>
+  </div>
 
-<main class="grid" id="grid" aria-live="polite"></main>
+  <header class="topbar">
+    <div class="brand">
+      <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 6h18v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z"></path>
+        <path d="M3 6l2-3h14l2 3"></path>
+        <circle cx="12" cy="14" r="4"></circle>
+        <path d="M12 12a2 2 0 0 0 2 2"></path>
+      </svg>
+      <h1 id="app-title">洗好沒</h1>
+    </div>
+    <div class="topbar-right">
+      <span class="badge" id="mode-badge">
+        <span class="status-dot"></span>
+        <span class="status-text">連線</span>
+      </span>
+      <button class="switch-btn" id="switch-building-btn">切換棟別</button>
+    </div>
+  </header>
 
-<div class="building-screen" id="building-screen" hidden>
-  <h2>選擇你的棟別</h2>
-  <p>選擇後會記住，下次開啟直接進入看板</p>
-  <div id="building-list" style="display:flex;flex-direction:column;gap:14px;width:100%;align-items:center"></div>
+  <main class="grid" id="grid"></main>
+
+  <div class="sheet-overlay" id="sheet-overlay"></div>
+  <div class="sheet" id="sheet">
+    <div class="sheet-title" id="sheet-title">機台名稱</div>
+    <div class="sheet-subtitle" id="sheet-subtitle">請選擇操作</div>
+    <div class="sheet-actions" id="sheet-actions"></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="screen" id="building-screen" hidden>
+    <h2>選擇宿舍棟別</h2>
+    <p>選擇後會記憶於手機，下次自動載入</p>
+    <div id="building-list" style="width:100%; display:flex; flex-direction:column; align-items:center; gap:10px;"></div>
+  </div>
 </div>
 
-<div class="toast" id="toast" role="status"></div>
-
 <script type="module">
-/* =====================================================================
- * 宿舍洗衣機即時看板
- * 無伺服器架構：Firebase Realtime Database 即時同步 + 前端獨立倒數
- * ===================================================================== */
-
-/* ---------- 1. Firebase 設定 ---------- */
+/* ---------- 1. Firebase 金鑰設定 ---------- */
 const firebaseConfig = {
   apiKey: "AIzaSyAM8mbNa0bSMJjil_iUc64l4tac-T7MVw4",
   authDomain: "dorm-laundry-c42ae.firebaseapp.com",
@@ -242,57 +441,93 @@ const firebaseConfig = {
   messagingSenderId: "879787145129",
   appId: "1:879787145129:web:240716111aac07283d36b8"
 };
-const FIREBASE_READY = firebaseConfig.apiKey !== "" && firebaseConfig.apiKey !== "YOUR_API_KEY";
+const FIREBASE_READY = firebaseConfig.apiKey !== "";
 
-/* ---------- 2. 常數 ---------- */
+/* ---------- 2. 常數與設定 ---------- */
 const BUILDINGS = [
-  { id: "A_building", label: "A 棟" },
-  { id: "B_building", label: "B 棟" }
+  { id: "A_building", label: "A 棟宿舍" },
+  { id: "B_building", label: "B 棟宿舍" }
 ];
+
 const MACHINES = [
-  { id: "wash_1", label: "洗 1", type: "washer",  typeLabel: "洗衣機" },
-  { id: "wash_2", label: "洗 2", type: "washer",  typeLabel: "洗衣機" },
-  { id: "dry_1",  label: "烘 1", type: "dryer",   typeLabel: "烘衣機" },
-  { id: "spin_1", label: "脫 1", type: "spinner", typeLabel: "脫水機" }
+  {
+    id: "wash_1", label: "洗 1", type: "washer", typeLabel: "洗衣機 $30",
+    icon: `<svg class="m-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="2" width="18" height="20" rx="3"/><circle cx="12" cy="13" r="5"/><circle cx="8" cy="6" r="1.2" fill="currentColor"/><circle cx="11" cy="6" r="1.2" fill="currentColor"/></svg>`
+  },
+  {
+    id: "wash_2", label: "洗 2", type: "washer", typeLabel: "洗衣機 $30",
+    icon: `<svg class="m-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="2" width="18" height="20" rx="3"/><circle cx="12" cy="13" r="5"/><circle cx="8" cy="6" r="1.2" fill="currentColor"/><circle cx="11" cy="6" r="1.2" fill="currentColor"/></svg>`
+  },
+  {
+    id: "dry_1",  label: "烘 1", type: "dryer",  typeLabel: "烘衣機 $30",
+    icon: `<svg class="m-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="2" width="18" height="20" rx="3"/><circle cx="12" cy="13" r="5"/><path d="M12 10a3 3 0 0 1 3 3"/></svg>`
+  },
+  {
+    id: "spin_1", label: "脫 1", type: "spinner",typeLabel: "脫水機 $5/3分",
+    icon: `<svg class="m-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><circle cx="12" cy="12" r="3"/></svg>`
+  }
 ];
+
 const TIME_OPTIONS = {
   washer: [
-    { label: "一般", minutes: 37 },
-    { label: "精緻", minutes: 35 },
-    { label: "免燙", minutes: 36 }
+    { label: "一般洗", minutes: 37 },
+    { label: "精緻洗", minutes: 35 },
+    { label: "免燙洗", minutes: 36 }
   ],
   dryer: [
-    { label: "標準", minutes: 40 }
+    { label: "標準烘乾 (高/中/低溫)", minutes: 40 }
+  ],
+  spinner: [
+    { label: "投入 5 元", minutes: 3 },
+    { label: "投入 10 元", minutes: 6 },
+    { label: "投入 15 元", minutes: 9 }
   ]
 };
-const SPIN_STEP_MIN = 3;          // 脫水機每次點擊 +3 分鐘
-const OVERTIME_MS  = 15 * 60 * 1000; // finished 超過 15 分鐘自動回 idle
-const LS_BUILDING  = "laundry_building";
-const LS_DEMO_DB   = "laundry_demo_db";
-const FINISHED_TEXT = { washer: "已洗完，待取衣", dryer: "已烘完，待取衣", spinner: "已脫完，待取衣" };
+const OVERTIME_MS = 15 * 60 * 1000;
+const LS_BUILDING = "laundry_building";
+const LS_DEMO_DB  = "laundry_demo_db";
 
-/* ---------- 3. 後端介面（Firebase 或本機示範模式，對 UI 完全透明） ---------- */
+/* ---------- 3. 伺服器時間校正核心 (解決裝置時間落差) ---------- */
+let serverTimeOffset = 0; // 伺服器時間與本機時間的毫秒差距
+
+function getNow() {
+  return Date.now() + serverTimeOffset; // 取得全網統一的 Firebase 雲端時間
+}
+
+/* ---------- 4. 連線狀態更新控制 ---------- */
+const badge = document.getElementById("mode-badge");
+const statusText = badge.querySelector(".status-text");
+
+function updateStatus(isOnline){
+  if (isOnline) {
+    statusText.textContent = "連線";
+    badge.classList.remove("offline");
+  } else {
+    statusText.textContent = "離線";
+    badge.classList.add("offline");
+  }
+}
+
+window.addEventListener("online", () => updateStatus(true));
+window.addEventListener("offline", () => updateStatus(false));
+
+/* ---------- 5. 後端連線適配器 ---------- */
 function emptyMachine(type){ return { type, status: "idle", startTime: 0, duration: 0, endTime: 0 }; }
 
 function createDemoBackend(){
   const readAll = () => { try { return JSON.parse(localStorage.getItem(LS_DEMO_DB)) || {}; } catch { return {}; } };
-  const writeAll = (d) => {
-    localStorage.setItem(LS_DEMO_DB, JSON.stringify(d));
-    window.dispatchEvent(new CustomEvent("demo-db-change"));
-  };
+  const writeAll = (d) => { localStorage.setItem(LS_DEMO_DB, JSON.stringify(d)); window.dispatchEvent(new CustomEvent("demo-db-change")); };
+  updateStatus(navigator.onLine);
   return {
     mode: "demo",
-    subscribe(buildingId, cb){
-      const emit = () => cb(readAll()[buildingId] || null);
+    subscribe(bId, cb){
+      const emit = () => cb(readAll()[bId] || null);
       window.addEventListener("demo-db-change", emit);
-      window.addEventListener("storage", emit); // 跨分頁同步
       emit();
     },
-    write(buildingId, machineId, fields){
-      const all = readAll();
-      all[buildingId] = all[buildingId] || {};
-      all[buildingId][machineId] = { ...emptyMachine(machineId.startsWith("spin") ? "spinner" : machineId.startsWith("dry") ? "dryer" : "washer"),
-                                     ...(all[buildingId][machineId] || {}), ...fields };
+    write(bId, mId, fields){
+      const all = readAll(); all[bId] = all[bId] || {};
+      all[bId][mId] = { ...(all[bId][mId] || emptyMachine(mId.startsWith("spin")?"spinner":mId.startsWith("dry")?"dryer":"washer")), ...fields };
       writeAll(all);
     }
   };
@@ -302,250 +537,251 @@ async function createFirebaseBackend(){
   const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
   const { getDatabase, ref, onValue, update } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
   const db = getDatabase(initializeApp(firebaseConfig));
+  
+  // 1. 監聽連線狀態
+  const connectedRef = ref(db, ".info/connected");
+  onValue(connectedRef, (snap) => {
+    updateStatus(snap.val() === true && navigator.onLine);
+  });
+
+  // 2. 監聽並計算 Firebase 伺服器時間補償值 (關鍵對齊邏輯)
+  const offsetRef = ref(db, ".info/serverTimeOffset");
+  onValue(offsetRef, (snap) => {
+    serverTimeOffset = snap.val() || 0;
+  });
+
   return {
     mode: "firebase",
-    subscribe(buildingId, cb){
-      onValue(ref(db, buildingId), (snap) => cb(snap.val()));
-    },
-    write(buildingId, machineId, fields){
-      update(ref(db, `${buildingId}/${machineId}`), fields);
-    }
+    subscribe(bId, cb){ onValue(ref(db, bId), (snap) => cb(snap.val())); },
+    write(bId, mId, fields){ update(ref(db, `${bId}/${mId}`), fields); }
   };
 }
 
-/* ---------- 4. 應用程式狀態 ---------- */
+/* ---------- 6. 全域狀態 ---------- */
 const backend = FIREBASE_READY ? await createFirebaseBackend() : createDemoBackend();
 let currentBuilding = localStorage.getItem(LS_BUILDING) || null;
-let machinesData = {};      // 最新同步資料 { machineId: {...} }
-let pendingTimers = {};     // 防止重複寫入 finished / idle
-let openOptionsFor = null;  // 目前展開時間選項的機台
+let machinesData = {};
+let activeMachineId = null;
 
-/* ---------- 5. DOM ---------- */
+/* ---------- 7. DOM 元素與 Toast ---------- */
 const grid = document.getElementById("grid");
-const buildingScreen = document.getElementById("building-screen");
-const buildingList = document.getElementById("building-list");
+const sheetOverlay = document.getElementById("sheet-overlay");
+const sheet = document.getElementById("sheet");
+const sheetTitle = document.getElementById("sheet-title");
+const sheetSubtitle = document.getElementById("sheet-subtitle");
+const sheetActions = document.getElementById("sheet-actions");
 const toast = document.getElementById("toast");
-let toastTimer = null;
 
 function showToast(msg){
-  toast.textContent = msg;
-  toast.classList.add("show");
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toast.classList.remove("show"), 2000);
+  toast.textContent = msg; toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 2000);
 }
 
-/* ---------- 6. 建立四宮格 ---------- */
-const tileEls = {};
+function closeSheet(){
+  sheetOverlay.classList.remove("active");
+  sheet.classList.remove("active");
+  activeMachineId = null;
+}
+sheetOverlay.addEventListener("click", closeSheet);
+
+/* ---------- 8. 建立卡片 ---------- */
+const cardEls = {};
 for (const m of MACHINES){
-  const tile = document.createElement("section");
-  tile.className = "tile";
-  tile.dataset.status = "idle";
-  tile.dataset.machine = m.id;
+  const card = document.createElement("div");
+  card.className = "card";
+  card.dataset.status = "idle";
+  
+  card.innerHTML = `
+    <div class="card-header">
+      <div class="card-title-group">
+        ${m.icon}
+        <span class="card-title">${m.label}</span>
+      </div>
+      <span class="card-type">${m.typeLabel}</span>
+    </div>
+    <div class="card-body" id="body-${m.id}"></div>
+    <div class="card-footer" id="footer-${m.id}">點擊進行操作</div>
+  `;
 
-  const label = document.createElement("div");
-  label.className = "tile-label";
-  label.innerHTML = `${m.label}<small>${m.typeLabel}</small>`;
-
-  const body = document.createElement("div");
-  body.className = "tile-body";
-
-  const reset = document.createElement("button");
-  reset.type = "button";
-  reset.className = "force-reset";
-  reset.textContent = "強制重置";
-  reset.setAttribute("aria-label", `${m.label} 強制重置`);
-  reset.addEventListener("click", () => {
-    writeMachine(m.id, { status: "idle", startTime: 0, duration: 0, endTime: 0 });
-    showToast(`${m.label} 已重置為空閒`);
-  });
-
-  tile.append(label, body, reset);
-  grid.appendChild(tile);
-  tileEls[m.id] = { tile, body, meta: m };
+  card.addEventListener("click", () => openSheetFor(m));
+  grid.appendChild(card);
+  cardEls[m.id] = { card, meta: m };
 }
 
-/* ---------- 7. 渲染 ---------- */
+/* ---------- 9. 渲染介面 ---------- */
 function fmtRemaining(ms){
   const s = Math.max(0, Math.ceil(ms / 1000));
-  return `${String(Math.floor(s / 60)).padStart(2, "0")} 分 ${String(s % 60).padStart(2, "0")} 秒`;
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
 function render(){
+  const now = getNow(); // 使用雲端校正後的時間
   for (const m of MACHINES){
     const d = machinesData[m.id] || emptyMachine(m.type);
-    const { tile, body } = tileEls[m.id];
-    tile.dataset.status = d.status;
-    body.replaceChildren();
+    const { card } = cardEls[m.id];
+    const body = document.getElementById(`body-${m.id}`);
+    const footer = document.getElementById(`footer-${m.id}`);
+    card.dataset.status = d.status;
 
     if (d.status === "running"){
-      const txt = document.createElement("div");
-      txt.className = "status-text";
-      txt.textContent = "運轉中";
-      const cd = document.createElement("div");
-      cd.className = "countdown";
-      cd.dataset.countdownFor = m.id;
-      cd.textContent = `剩餘 ${fmtRemaining(d.endTime - Date.now())}`;
-      body.append(txt, cd);
-      if (m.type === "spinner"){
-        const add = document.createElement("button");
-        add.type = "button";
-        add.className = "add-time-btn";
-        add.textContent = `+${SPIN_STEP_MIN} 分鐘`;
-        add.addEventListener("click", () => addSpinTime(m.id));
-        const hint = document.createElement("div");
-        hint.className = "hint";
-        hint.textContent = "點擊可累加時間";
-        body.append(add, hint);
-      }
+      const totalMs = (d.duration || 1) * 1000;
+      const remainMs = Math.max(0, d.endTime - now);
+      const progress = Math.min(1, remainMs / totalMs);
+      const strokeOffset = 251.2 * progress;
+
+      body.innerHTML = `
+        <div class="ring-container">
+          <svg class="ring-svg" viewBox="0 0 100 100">
+            <circle class="ring-bg" cx="50" cy="50" r="40"/>
+            <circle class="ring-progress" cx="50" cy="50" r="40" 
+                    stroke-dasharray="251.2" stroke-dashoffset="${strokeOffset}"/>
+          </svg>
+          <div class="time-display">${fmtRemaining(remainMs)}</div>
+        </div>
+      `;
+      footer.textContent = "運轉中・點擊設定";
     } else if (d.status === "finished"){
-      const txt = document.createElement("div");
-      txt.className = "status-text";
-      txt.style.fontSize = "clamp(20px,3vw,30px)";
-      txt.style.fontWeight = "800";
-      txt.textContent = FINISHED_TEXT[m.type];
-      const clear = document.createElement("button");
-      clear.type = "button";
-      clear.className = "clear-btn";
-      clear.textContent = "我已清空";
-      clear.addEventListener("click", () => {
-        writeMachine(m.id, { status: "idle", startTime: 0, duration: 0, endTime: 0 });
-        showToast(`${m.label} 已清空，回到空閒`);
-      });
-      body.append(txt, clear);
-    } else { // idle
-      if (openOptionsFor === m.id && TIME_OPTIONS[m.type]){
-        const box = document.createElement("div");
-        box.className = "options";
-        for (const opt of TIME_OPTIONS[m.type]){
-          const b = document.createElement("button");
-          b.type = "button";
-          b.className = "option-btn";
-          b.innerHTML = `<span>${opt.label}</span><span class="mins">${opt.minutes} 分鐘</span>`;
-          b.addEventListener("click", () => startMachine(m.id, opt.minutes * 60));
-          box.appendChild(b);
-        }
-        const cancel = document.createElement("button");
-        cancel.type = "button";
-        cancel.className = "cancel-btn";
-        cancel.textContent = "取消";
-        cancel.addEventListener("click", () => { openOptionsFor = null; render(); });
-        box.appendChild(cancel);
-        body.appendChild(box);
-      } else {
-        const action = document.createElement("button");
-        action.type = "button";
-        action.className = "big-action";
-        action.innerHTML = `<span class="main">空閒中</span><span class="sub">${m.type === "spinner" ? `點擊啟動 +${SPIN_STEP_MIN} 分鐘` : "點擊啟動"}</span>`;
-        action.setAttribute("aria-label", `${m.label} 啟動`);
-        action.addEventListener("click", () => {
-          if (m.type === "spinner"){
-            startMachine(m.id, SPIN_STEP_MIN * 60);
-          } else {
-            openOptionsFor = m.id;
-            render();
-          }
-        });
-        body.appendChild(action);
-      }
+      body.innerHTML = `
+        <div class="status-box">
+          <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <div class="status-label">已洗完</div>
+        </div>
+      `;
+      footer.textContent = "待清空・點擊釋出";
+    } else {
+      body.innerHTML = `
+        <div class="status-box">
+          <svg class="status-icon idle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>
+          <div class="status-label">空閒中</div>
+        </div>
+      `;
+      footer.textContent = "點擊選擇模式";
     }
   }
 }
 
-/* ---------- 8. 寫入動作 ---------- */
-function writeMachine(machineId, fields){
-  backend.write(currentBuilding, machineId, fields);
+/* ---------- 10. 彈窗 (Modal Card) 邏輯 ---------- */
+function openSheetFor(m){
+  activeMachineId = m.id;
+  const d = machinesData[m.id] || emptyMachine(m.type);
+  sheetTitle.textContent = `${m.label} (${m.typeLabel})`;
+  sheetActions.innerHTML = "";
+
+  if (d.status === "idle"){
+    sheetSubtitle.textContent = "選擇運轉模式：";
+    for (const opt of TIME_OPTIONS[m.type]){
+      const btn = document.createElement("button");
+      btn.className = "btn-action btn-primary";
+      btn.innerHTML = `<span>${opt.label}</span><span>${opt.minutes} 分鐘</span>`;
+      btn.onclick = () => {
+        startMachine(m.id, opt.minutes * 60);
+        closeSheet();
+        showToast(`${m.label} 已啟動 (${opt.minutes}分)`);
+      };
+      sheetActions.appendChild(btn);
+    }
+  } else if (d.status === "running"){
+    sheetSubtitle.textContent = `運轉中，剩餘 ${fmtRemaining(d.endTime - getNow())}`;
+    
+    if (m.type === "spinner"){
+      const addBtn = document.createElement("button");
+      addBtn.className = "btn-action btn-primary";
+      addBtn.innerHTML = `<span>投入 5 元累加時間</span><span>+3 分鐘</span>`;
+      addBtn.onclick = () => { addSpinTime(m.id); closeSheet(); };
+      sheetActions.appendChild(addBtn);
+    }
+
+    const resetBtn = document.createElement("button");
+    resetBtn.className = "btn-action btn-danger";
+    resetBtn.innerHTML = `<span>現場空機？強制重置</span>`;
+    resetBtn.onclick = () => {
+      writeMachine(m.id, { status: "idle", startTime: 0, duration: 0, endTime: 0 });
+      closeSheet();
+      showToast(`${m.label} 已強制重置`);
+    };
+    sheetActions.appendChild(resetBtn);
+  } else if (d.status === "finished"){
+    sheetSubtitle.textContent = "衣服已洗完，確認取回：";
+
+    const clearBtn = document.createElement("button");
+    clearBtn.className = "btn-action btn-warning";
+    clearBtn.innerHTML = `<span>我已拿走衣物，釋出機台</span>`;
+    clearBtn.onclick = () => {
+      writeMachine(m.id, { status: "idle", startTime: 0, duration: 0, endTime: 0 });
+      closeSheet();
+      showToast(`${m.label} 已歸還空閒`);
+    };
+    sheetActions.appendChild(clearBtn);
+  }
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "btn-action btn-secondary";
+  cancelBtn.innerHTML = `<span style="width:100%; text-align:center;">取消</span>`;
+  cancelBtn.onclick = closeSheet;
+  sheetActions.appendChild(cancelBtn);
+
+  sheetOverlay.classList.add("active");
+  sheet.classList.add("active");
 }
 
-function startMachine(machineId, seconds){
-  const now = Date.now();
-  writeMachine(machineId, { status: "running", startTime: now, duration: seconds, endTime: now + seconds * 1000 });
-  openOptionsFor = null;
+/* ---------- 11. 資料寫入與倒數迴圈 ---------- */
+function writeMachine(mId, fields){ backend.write(currentBuilding, mId, fields); }
+
+function startMachine(mId, seconds){
+  const now = getNow(); // 使用雲端校正後的時間寫入倒數
+  writeMachine(mId, { status: "running", startTime: now, duration: seconds, endTime: now + seconds * 1000 });
 }
 
-function addSpinTime(machineId){
-  const d = machinesData[machineId];
-  if (!d || d.status !== "running") return;
-  writeMachine(machineId, {
-    duration: (d.duration || 0) + SPIN_STEP_MIN * 60,
-    endTime: (d.endTime || Date.now()) + SPIN_STEP_MIN * 60 * 1000
+function addSpinTime(mId){
+  const d = machinesData[mId]; if (!d) return;
+  writeMachine(mId, {
+    duration: (d.duration || 0) + 180,
+    endTime: (d.endTime || getNow()) + 180000
   });
-  showToast(`已累加 ${SPIN_STEP_MIN} 分鐘`);
+  showToast("已累加 3 分鐘");
 }
 
-/* ---------- 9. 前端獨立倒數 + 超時防呆 ---------- */
 setInterval(() => {
   if (!currentBuilding) return;
-  const now = Date.now();
+  const now = getNow(); // 使用雲端校正後的時間進行計時判斷
   for (const m of MACHINES){
-    const d = machinesData[m.id];
-    if (!d) continue;
-    // 每秒更新倒數文字
-    if (d.status === "running"){
-      const cd = tileEls[m.id].body.querySelector(`[data-countdown-for="${m.id}"]`);
-      if (cd) cd.textContent = `剩餘 ${fmtRemaining(d.endTime - now)}`;
-      // 時間到 → 前端主動標記 finished（每台機器只觸發一次）
-      if (now >= d.endTime && !pendingTimers[m.id]){
-        pendingTimers[m.id] = true;
-        writeMachine(m.id, { status: "finished" });
-        setTimeout(() => delete pendingTimers[m.id], 5000);
-      }
+    const d = machinesData[m.id]; if (!d) continue;
+    if (d.status === "running" && now >= d.endTime){
+      writeMachine(m.id, { status: "finished" });
     }
-    // 超時防呆：finished 超過 endTime 15 分鐘 → 自動回 idle
-    if (d.status === "finished" && now > d.endTime + OVERTIME_MS && !pendingTimers[m.id]){
-      pendingTimers[m.id] = true;
+    if (d.status === "finished" && now > d.endTime + OVERTIME_MS){
       writeMachine(m.id, { status: "idle", startTime: 0, duration: 0, endTime: 0 });
-      setTimeout(() => delete pendingTimers[m.id], 5000);
     }
   }
+  render();
 }, 1000);
 
-/* ---------- 10. 棟別選擇與訂閱 ---------- */
-let unsubscribeNote = null;
-function enterBuilding(buildingId){
-  currentBuilding = buildingId;
-  localStorage.setItem(LS_BUILDING, buildingId);
-  const b = BUILDINGS.find(x => x.id === buildingId);
-  document.getElementById("app-title").textContent = `${b ? b.label : buildingId} 洗衣看板`;
-  document.title = `${b ? b.label : buildingId} 洗衣看板`;
-  buildingScreen.hidden = true;
-  openOptionsFor = null;
-  backend.subscribe(buildingId, (data) => {
-    machinesData = data || {};
-    render();
-  });
+/* ---------- 12. 棟別選擇與初始化 ---------- */
+function enterBuilding(bId){
+  currentBuilding = bId;
+  localStorage.setItem(LS_BUILDING, bId);
+  document.getElementById("building-screen").hidden = true;
+  backend.subscribe(bId, (data) => { machinesData = data || {}; render(); });
 }
 
-function showBuildingScreen(){
-  buildingScreen.hidden = false;
-}
-
+const bList = document.getElementById("building-list");
 for (const b of BUILDINGS){
   const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "building-btn";
-  btn.innerHTML = `${b.label}<small>${b.id}</small>`;
-  btn.addEventListener("click", () => enterBuilding(b.id));
-  buildingList.appendChild(btn);
+  btn.className = "btn-building";
+  btn.textContent = b.label;
+  btn.onclick = () => enterBuilding(b.id);
+  bList.appendChild(btn);
 }
 
-document.getElementById("switch-building").addEventListener("click", showBuildingScreen);
-
-/* ---------- 11. 啟動 ---------- */
-const badge = document.getElementById("mode-badge");
-if (backend.mode === "firebase"){
-  badge.textContent = "Firebase 即時同步";
-} else {
-  badge.textContent = "示範模式（未設定 Firebase）";
-  badge.classList.add("demo");
-  badge.title = "在 index.html 填入 firebaseConfig 即可啟用即時同步";
-}
+document.getElementById("switch-building-btn").onclick = () => {
+  document.getElementById("building-screen").hidden = false;
+};
 
 if (currentBuilding && BUILDINGS.some(b => b.id === currentBuilding)){
   enterBuilding(currentBuilding);
 } else {
-  showBuildingScreen();
+  document.getElementById("building-screen").hidden = false;
 }
-render();
 </script>
 </body>
 </html>
