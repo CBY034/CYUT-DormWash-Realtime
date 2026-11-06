@@ -322,6 +322,49 @@ html, body {
   text-overflow: ellipsis;
 }
 
+/* 免責聲明頁尾 */
+.app-footer-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px clamp(8px, 1.5vh, 12px);
+  flex: 0 0 auto;
+  z-index: 10;
+  min-height: 36px;
+}
+
+.app-disclaimer {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-sub);
+  opacity: 0.75;
+  padding-left: 36px; /* 為左下角驚嘆號按鈕留出邊距 */
+  padding-right: 12px;
+}
+
+/* 左下角驚嘆號圓圈浮動按鈕 */
+.info-fab-btn {
+  position: absolute;
+  left: 12px;
+  bottom: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1.5px solid var(--border-color);
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: transform 0.15s ease, background 0.15s ease;
+  z-index: 15;
+}
+.info-fab-btn:active { transform: scale(0.92); background: #eff6ff; }
+
 /* 懸浮彈窗 (底部抽屜操作 Modal) */
 .sheet-overlay {
   position: absolute; inset: 0; background: rgba(15, 23, 42, 0.4);
@@ -366,7 +409,7 @@ html, body {
 .btn-secondary { background: #f1f5f9; color: var(--text-main); border: 1px solid var(--border-color); }
 .btn-danger { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; }
 
-/* 替換原本 alert() 的「螢幕正中央」通用提示彈窗 */
+/* 螢幕正中央通用 Alert / Info 彈窗 */
 .custom-alert-overlay {
   position: absolute; inset: 0; background: rgba(15, 23, 42, 0.5);
   backdrop-filter: blur(4px); z-index: 400; opacity: 0; pointer-events: none;
@@ -377,7 +420,7 @@ html, body {
 .custom-alert-modal {
   position: absolute; top: 50%; left: 50%;
   transform: translate(-50%, -50%) scale(0.9);
-  width: calc(100% - 48px); max-width: 340px; min-width: 280px;
+  width: calc(100% - 48px); max-width: 360px; min-width: 280px;
   background: #ffffff; border-radius: 20px; padding: 20px;
   z-index: 401; opacity: 0; pointer-events: none;
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
@@ -390,7 +433,7 @@ html, body {
   opacity: 1; pointer-events: auto;
 }
 .custom-alert-title { font-size: 17px; font-weight: 900; color: #0f172a; }
-.custom-alert-body { font-size: 13px; font-weight: 600; color: #475569; line-height: 1.5; white-space: pre-line; }
+.custom-alert-body { font-size: 13px; font-weight: 600; color: #475569; line-height: 1.55; white-space: pre-line; text-align: left; }
 .custom-alert-btn {
   width: 100%; height: 42px; background: #2563eb; color: #ffffff;
   border: none; border-radius: 12px; font-size: 15px; font-weight: 800; cursor: pointer;
@@ -462,6 +505,10 @@ html, body {
   margin-top: 4px;
 }
 .btn-submit:active { transform: scale(0.98); }
+
+.disclaimer-note {
+  font-size: 10px; font-weight: 600; color: #94a3b8; text-align: center; margin-top: 4px;
+}
 </style>
 </head>
 <body>
@@ -498,6 +545,19 @@ html, body {
 
   <main class="grid" id="grid"></main>
 
+  <footer class="app-footer-bar">
+    <button class="info-fab-btn" id="info-fab-btn" title="網頁資訊與意見回報">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+    </button>
+    <div class="app-disclaimer">
+      本平台為個人獨立開發之非官方輔助工具，與任何學校或宿舍官方管理單位無關。
+    </div>
+  </footer>
+
   <div class="sheet-overlay" id="sheet-overlay"></div>
   <div class="sheet" id="sheet">
     <div class="sheet-title" id="sheet-title">機台名稱</div>
@@ -505,7 +565,7 @@ html, body {
     <div class="sheet-actions" id="sheet-actions"></div>
   </div>
 
-  <!-- 自訂螢幕正中央通用 Alert 彈窗 -->
+  <!-- 自訂螢幕正中央通用 Alert / Info 彈窗 -->
   <div class="custom-alert-overlay" id="custom-alert-overlay"></div>
   <div class="custom-alert-modal" id="custom-alert-modal">
     <div class="custom-alert-title" id="custom-alert-title">提示訊息</div>
@@ -534,6 +594,7 @@ html, body {
     </div>
 
     <button class="btn-submit" id="save-profile-btn">進入系統</button>
+    <span class="disclaimer-note">註：本系統為個人獨立開發之非官方輔助工具</span>
   </div>
 </div>
 
@@ -675,7 +736,7 @@ const sheetSubtitle = document.getElementById("sheet-subtitle");
 const sheetActions = document.getElementById("sheet-actions");
 const toast = document.getElementById("toast");
 
-// 置中通用 Alert 彈窗
+// 置中通用 Alert / Info 彈窗
 const alertOverlay = document.getElementById("custom-alert-overlay");
 const alertModal   = document.getElementById("custom-alert-modal");
 const alertTitle   = document.getElementById("custom-alert-title");
@@ -684,7 +745,7 @@ const alertBtn     = document.getElementById("custom-alert-btn");
 
 function showAlertModal(title, message){
   alertTitle.textContent = title;
-  alertBody.textContent  = message;
+  alertBody.innerHTML    = message;
   alertOverlay.classList.add("active");
   alertModal.classList.add("active");
 }
@@ -707,6 +768,21 @@ function closeSheet(){
   sheet.classList.remove("active");
 }
 sheetOverlay.addEventListener("click", closeSheet);
+
+// 左下角驚嘆號按鈕事件：觸發網頁資訊與意見回報彈窗
+document.getElementById("info-fab-btn").onclick = () => {
+  showAlertModal(
+    "關於「洗好沒」",
+    `<b>ℹ️ 專案簡介</b>
+本平台為個人獨立開發之宿舍洗衣房即時狀態看板，提供即時倒數、狀態同步與共享功能。
+
+<b>⚠️ 免責聲明</b>
+本系統非官方系統，與任何學校、宿舍官方管理單位無任何關聯。
+
+<b>💬 問題與意見回報</b>
+若在使用過程中遇到倒數不準、系統異常或有任何功能建議，歡迎隨時透過下方管道進行回報！`
+  );
+};
 
 /* ---------- 7. 建立機台卡片 ---------- */
 const cardEls = {};
@@ -963,7 +1039,7 @@ document.getElementById("save-profile-btn").onclick = () => {
     const selectedBCode = tempSelectedBuilding.replace('_building', '');
     showAlertModal(
       "房號格式不正確！", 
-      "請輸入正確房號      例：111-1"
+      `請依照規則輸入：[戶1-2][樓1-5][號1-6]-[床1-2]\n例如：111-1 (選 ${selectedBCode} 棟即為 ${selectedBCode}111-1，表示 1戶1樓1號1床)`
     );
     return;
   }
