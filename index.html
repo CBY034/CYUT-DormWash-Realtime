@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="zh-Hant">
 <head>
+<link rel="icon" href="favicon.ico" type="image/x-icon" />
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>洗好沒</title>
@@ -554,7 +555,7 @@ html, body {
       </svg>
     </button>
     <div class="app-disclaimer">
-      本平台為個人獨立開發之非官方輔助工具，與任何學校或宿舍官方管理單位無關。
+      本平台為個人獨立開發輔助工具，與任何學校或宿舍官方管理單位無關。
     </div>
   </footer>
 
@@ -671,9 +672,6 @@ function updateStatus(isOnline){
   if (!isOnline) {
     statusText.textContent = "離線";
     badge.className = "badge offline";
-  } else if (viewBuilding !== userBuilding) {
-    statusText.textContent = "唯讀 (跨棟)";
-    badge.className = "badge readonly-mode";
   } else {
     statusText.textContent = "連線";
     badge.className = "badge";
@@ -774,10 +772,10 @@ document.getElementById("info-fab-btn").onclick = () => {
   showAlertModal(
     "關於「洗好沒」",
     `<b>ℹ️ 專案簡介</b>
-本平台為個人獨立開發之宿舍洗衣房即時狀態看板，提供即時倒數、狀態同步與共享功能。
+本平台為個人獨立開發之宿舍洗衣房即時狀態看板，提供倒數、狀態同步功能。
 
 <b>⚠️ 免責聲明</b>
-本系統非官方系統，與任何學校、宿舍官方管理單位無任何關聯。
+本平台為個人獨立開發輔助工具，與任何學校或宿舍官方管理單位無關。。
 
 <b>💬 問題與意見回報</b>
 若在使用過程中遇到倒數不準、系統異常或有任何功能建議，歡迎隨時透過下方管道進行回報！`
@@ -1039,7 +1037,8 @@ document.getElementById("save-profile-btn").onclick = () => {
     const selectedBCode = tempSelectedBuilding.replace('_building', '');
     showAlertModal(
       "房號格式不正確！", 
-      `請依照規則輸入：[戶1-2][樓1-5][號1-6]-[床1-2]\n例如：111-1 (選 ${selectedBCode} 棟即為 ${selectedBCode}111-1，表示 1戶1樓1號1床)`
+      "請輸入正確房號", 
+      "例如：111-1"
     );
     return;
   }
