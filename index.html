@@ -174,9 +174,6 @@ html, body {
 .badge.offline { color: #475569; background: #f1f5f9; border-color: #cbd5e1; box-shadow: none; }
 .badge.offline .status-dot { background-color: #94a3b8; animation: none; }
 
-.badge.readonly-mode { color: #b45309; background: #fffbeb; border-color: #fcd34d; box-shadow: none; }
-.badge.readonly-mode .status-dot { background-color: #f59e0b; animation: none; }
-
 .switch-btn {
   font-size: clamp(11px, 1.4vw, 12px);
   font-weight: 700;
@@ -341,7 +338,7 @@ html, body {
   font-weight: 600;
   color: var(--text-sub);
   opacity: 0.75;
-  padding-left: 36px; /* 為左下角驚嘆號按鈕留出邊距 */
+  padding-left: 36px;
   padding-right: 12px;
 }
 
@@ -441,6 +438,33 @@ html, body {
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
 }
 .custom-alert-btn:active { transform: scale(0.98); }
+
+/* LINE 官方帳號按鈕樣式 */
+.btn-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 42px;
+  background-color: #06C755;
+  color: #ffffff !important;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(6, 199, 85, 0.25);
+  margin-top: 12px;
+  transition: transform 0.12s ease, background-color 0.12s ease;
+  white-space: nowrap; /* 新增：避免縮排空白與換行影響文字置中 */
+  text-align: center;
+}
+.btn-line:active {
+  transform: scale(0.98);
+  background-color: #05b34c;
+}
 
 /* Toast 提示 */
 .toast {
@@ -706,7 +730,21 @@ function createDemoBackend(){
 async function createFirebaseBackend(){
   const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
   const { getDatabase, ref, onValue, update } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
-  const db = getDatabase(initializeApp(firebaseConfig));
+  const { initializeAppCheck, ReCaptchaEnterpriseProvider } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js");
+
+  const app = initializeApp(firebaseConfig);
+
+  // 啟用 Google Cloud Fraud Defense (reCAPTCHA Enterprise) 保護
+  try {
+    initializeAppCheck(app, {
+      provider: new ReCaptchaEnterpriseProvider('YOUR_RECAPTCHA_ENTERPRISE_SITE_KEY'),
+      isTokenAutoRefreshEnabled: true
+    });
+  } catch (e) {
+    console.warn("App Check (Cloud Fraud Defense) 未設定 Site Key 或載入跳過", e);
+  }
+
+  const db = getDatabase(app);
   
   onValue(ref(db, ".info/connected"), (snap) => updateStatus(snap.val() === true && navigator.onLine));
   onValue(ref(db, ".info/serverTimeOffset"), (snap) => { serverTimeOffset = snap.val() || 0; });
@@ -723,7 +761,14 @@ async function createFirebaseBackend(){
 }
 
 /* ---------- 6. 全域變數與彈窗控制 ---------- */
-const backend = FIREBASE_READY ? await createFirebaseBackend() : createDemoBackend();
+let backend;
+try {
+  backend = FIREBASE_READY ? await createFirebaseBackend() : createDemoBackend();
+} catch (err) {
+  console.warn("Firebase 連線失敗，切換至離線 Demo 模式", err);
+  backend = createDemoBackend();
+}
+
 let machinesData = {};
 
 const grid = document.getElementById("grid");
@@ -767,18 +812,20 @@ function closeSheet(){
 }
 sheetOverlay.addEventListener("click", closeSheet);
 
-// 左下角驚嘆號按鈕事件：觸發網頁資訊與意見回報彈窗
+// 左下角驚嘆號按鈕事件：觸發網頁資訊與意見回報彈窗（已加入 LINE 官方帳號按鈕）
 document.getElementById("info-fab-btn").onclick = () => {
   showAlertModal(
     "關於「洗好沒」",
     `<b>ℹ️ 專案簡介</b>
-本平台為個人獨立開發之宿舍洗衣房即時狀態看板，提供倒數、狀態同步功能。
+本平台為個人獨立開發之宿舍洗衣房即時狀態看板，提供倒數與狀態同步功能。
 
 <b>⚠️ 免責聲明</b>
-本平台為個人獨立開發輔助工具，與任何學校或宿舍官方管理單位無關。。
+本平台為個人獨立開發輔助工具，與任何學校或宿舍官方管理單位無關。
 
-<b>💬 問題與意見回報</b>
-若在使用過程中遇到倒數不準、系統異常或有任何功能建議，歡迎隨時透過下方管道進行回報！`
+<b>💬 最新資訊與問題回報</b>
+若在使用過程中遇到倒數不準、系統異常或有任何功能建議，歡迎點擊下方按鈕前往 LINE 官方帳號進行回報！
+
+<a href="https://lin.ee/8MVpTgF" target="_blank" rel="noopener noreferrer" class="btn-line"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M24 10.304c0-5.369-5.383-9.738-12-9.738-6.616 0-12 4.369-12 9.738 0 4.814 4.269 8.846 10.036 9.608.391.084.922.258 1.057.592.122.303.079.778.039 1.085l-.171 1.027c-.053.303-.242 1.186 1.039.647 1.281-.54 6.911-4.069 9.428-6.967 1.739-1.907 2.572-3.843 2.572-6.092z"/></svg>加入 LINE 官方帳號回報問題</a>`
   );
 };
 
@@ -819,11 +866,17 @@ function render(){
     const { card } = cardEls[m.id];
     const body = document.getElementById(`body-${m.id}`);
     const footer = document.getElementById(`footer-${m.id}`);
-    card.dataset.status = d.status;
+    
+    // 計算前端動態狀態
+    let currentStatus = d.status;
+    if (d.status === "running" && now >= d.endTime) {
+      currentStatus = "finished";
+    }
+    card.dataset.status = currentStatus;
 
     const displayRoom = d.room || "未標示房號";
 
-    if (d.status === "running"){
+    if (currentStatus === "running"){
       const totalMs = (d.duration || 1) * 1000;
       const remainMs = Math.max(0, d.endTime - now);
       const progress = Math.min(1, remainMs / totalMs);
@@ -841,7 +894,7 @@ function render(){
         <span class="room-badge running">${displayRoom}</span>
       `;
       footer.textContent = `${displayRoom} 運轉中`;
-    } else if (d.status === "finished"){
+    } else if (currentStatus === "finished"){
       body.innerHTML = `
         <div class="status-box">
           <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -869,18 +922,24 @@ function openSheetFor(m){
   sheetActions.innerHTML = "";
 
   const canControl = (viewBuilding === userBuilding);
+  
+  const now = getNow();
+  let currentStatus = d.status;
+  if (d.status === "running" && now >= d.endTime) {
+    currentStatus = "finished";
+  }
 
   if (!canControl) {
     sheetSubtitle.textContent = `⚠️ 您登記為 ${userBuilding ? userBuilding.replace('_building','') + '棟' : ''}，僅能瀏覽此機台`;
-  } else if (d.status === "idle"){
+  } else if (currentStatus === "idle"){
     sheetSubtitle.textContent = `將以 ${userRoom} 房號啟動機台：`;
-  } else if (d.status === "running"){
+  } else if (currentStatus === "running"){
     sheetSubtitle.textContent = `${d.room || '未知'} 使用中，剩餘 ${fmtRemaining(d.endTime - getNow())}`;
-  } else if (d.status === "finished"){
+  } else if (currentStatus === "finished"){
     sheetSubtitle.textContent = `${d.room || '未知'} 衣服已洗完，請確認取回：`;
   }
 
-  if (d.status === "idle"){
+  if (currentStatus === "idle"){
     for (const opt of TIME_OPTIONS[m.type]){
       const btn = document.createElement("button");
       btn.className = "btn-action btn-primary";
@@ -893,7 +952,7 @@ function openSheetFor(m){
       };
       sheetActions.appendChild(btn);
     }
-  } else if (d.status === "running"){
+  } else if (currentStatus === "running"){
     if (m.type === "spinner"){
       const addBtn = document.createElement("button");
       addBtn.className = "btn-action btn-primary";
@@ -913,7 +972,7 @@ function openSheetFor(m){
       showToast(`${m.label} 已重置歸還空閒`);
     };
     sheetActions.appendChild(resetBtn);
-  } else if (d.status === "finished"){
+  } else if (currentStatus === "finished"){
     const clearBtn = document.createElement("button");
     clearBtn.className = "btn-action btn-warning";
     clearBtn.disabled = !canControl;
@@ -961,16 +1020,6 @@ function addSpinTime(mId){
 
 setInterval(() => {
   if (!viewBuilding) return;
-  const now = getNow();
-  for (const m of MACHINES){
-    const d = machinesData[m.id]; if (!d) continue;
-    if (d.status === "running" && now >= d.endTime){
-      writeMachine(m.id, { status: "finished" });
-    }
-    if (d.status === "finished" && now > d.endTime + OVERTIME_MS){
-      writeMachine(m.id, { status: "idle", startTime: 0, duration: 0, endTime: 0, room: "" });
-    }
-  }
   render();
 }, 1000);
 
@@ -1002,7 +1051,6 @@ function renderBuildingSelectBtns(){
     btn.textContent = b.code;
     btn.onclick = () => {
       tempSelectedBuilding = b.id;
-      prefixBadge.textContent = `${b.code} 棟`;
       renderBuildingSelectBtns();
     };
     bSelectGrid.appendChild(btn);
@@ -1026,7 +1074,7 @@ function validateAndParseRoom(rawInput, selectedBId){
   if (!isValid) return null;
 
   const bCode = selectedBId.replace('_building', '');
-  return `${bCode}${val}`; // 組合成完整標誌如 A111-1
+  return `${bCode}${val}`;
 }
 
 document.getElementById("save-profile-btn").onclick = () => {
@@ -1034,11 +1082,9 @@ document.getElementById("save-profile-btn").onclick = () => {
   const fullRoomStr = validateAndParseRoom(roomInputVal, tempSelectedBuilding);
   
   if (!fullRoomStr) {
-    const selectedBCode = tempSelectedBuilding.replace('_building', '');
     showAlertModal(
       "房號格式不正確！", 
-      "請輸入正確房號", 
-      "例如：111-1"
+      "請輸入正確房號<br>例：111-1"
     );
     return;
   }
