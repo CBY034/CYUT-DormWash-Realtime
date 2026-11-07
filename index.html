@@ -144,7 +144,7 @@ html, body {
 
 .topbar-right { display: flex; align-items: center; gap: 6px; }
 
-/* 連線 / 離線 / 唯讀 狀態指示 */
+/* 連線 / 離線 / 唯讀 / 定位狀態指示 */
 .badge {
   display: inline-flex; align-items: center; gap: 5px;
   font-size: clamp(10px, 1.4vw, 12px);
@@ -173,6 +173,9 @@ html, body {
 
 .badge.offline { color: #475569; background: #f1f5f9; border-color: #cbd5e1; box-shadow: none; }
 .badge.offline .status-dot { background-color: #94a3b8; animation: none; }
+
+.badge.location-ok { color: #065f46; background: #d1fae5; border-color: #6ee7b7; }
+.badge.location-off { color: #92400e; background: #fef3c7; border-color: #fcd34d; box-shadow: none; }
 
 .switch-btn {
   font-size: clamp(11px, 1.4vw, 12px);
@@ -458,7 +461,7 @@ html, body {
   box-shadow: 0 4px 12px rgba(6, 199, 85, 0.25);
   margin-top: 12px;
   transition: transform 0.12s ease, background-color 0.12s ease;
-  white-space: nowrap; /* 新增：避免縮排空白與換行影響文字置中 */
+  white-space: nowrap;
   text-align: center;
 }
 .btn-line:active {
@@ -560,6 +563,7 @@ html, body {
       </div>
     </div>
     <div class="topbar-right">
+      <span class="badge location-off" id="location-badge" style="cursor:pointer;" title="點擊重新定位">📍 定位中...</span>
       <span class="badge" id="mode-badge">
         <span class="status-dot"></span>
         <span class="status-text">連線</span>
@@ -579,7 +583,7 @@ html, body {
       </svg>
     </button>
     <div class="app-disclaimer">
-      本平台為個人獨立開發輔助工具，與任何學校或宿舍官方管理單位無關。
+      本平台為個人獨立開發輔助工具，與任何學校或宿舍管理單位無關。
     </div>
   </footer>
 
@@ -636,10 +640,18 @@ const firebaseConfig = {
 };
 const FIREBASE_READY = firebaseConfig.apiKey !== "";
 
-/* ---------- 2. 常數與 17 棟別設定 ---------- */
+/* ---------- 2. 17 大棟別設定與 GPS 地理圍欄 (250m) ---------- */
 const BUILDINGS = [
   "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "O", "Q", "R", "S"
 ].map(code => ({ id: `${code}_building`, code, label: `${code} 棟` }));
+
+// 朝陽科技大學 第二宿舍 GPS 座標與 250 公尺半徑限制
+const DORM2_LAT = 24.06024;
+const DORM2_LNG = 120.72632;
+const MAX_DISTANCE_METERS = 250;
+
+let isAtDorm = false;
+let userDistance = null;
 
 const MACHINES = [
   {
@@ -680,13 +692,72 @@ const LS_BUILDING = "laundry_user_building";
 const LS_ROOM     = "laundry_user_room";
 const LS_DEMO_DB  = "laundry_demo_db";
 
-/* ---------- 3. 伺服器時間校正與使用者狀態 ---------- */
+/* ---------- 3. 伺服器時間與 GPS 定位校驗邏輯 ---------- */
 let serverTimeOffset = 0;
 let userBuilding = localStorage.getItem(LS_BUILDING) || null;
 let userRoom     = localStorage.getItem(LS_ROOM) || null;
-let viewBuilding = userBuilding || "A_building";
+let viewBuilding = userBuilding || "A1_building";
 
 function getNow() { return Date.now() + serverTimeOffset; }
+
+// Haversine 大圓距離計算公式 (公尺)
+function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c);
+}
+
+function updateLocationUI(){
+  const locBadge = document.getElementById("location-badge");
+  if (!locBadge) return;
+  if (isAtDorm) {
+    locBadge.className = "badge location-ok";
+    locBadge.textContent = "📍 二宿內";
+  } else {
+    locBadge.className = "badge location-off";
+    locBadge.textContent = userDistance !== null ? `📍 離二宿${userDistance}m(唯讀)` : "📍 未在二宿(唯讀)";
+  }
+}
+
+function requestLocationCheck(showToastMsg = true){
+  const locBadge = document.getElementById("location-badge");
+  if (locBadge) locBadge.textContent = "📍 定位中...";
+
+  if (!navigator.geolocation) {
+    isAtDorm = false;
+    updateLocationUI();
+    if (showToastMsg) showToast("裝置不支援定位功能");
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      userDistance = getDistanceFromLatLonInMeters(lat, lng, DORM2_LAT, DORM2_LNG);
+      isAtDorm = (userDistance <= MAX_DISTANCE_METERS);
+      updateLocationUI();
+      if (showToastMsg) {
+        showToast(isAtDorm ? `定位成功：您已在二宿範圍內` : `非 250m 二宿範圍(約${userDistance}m)，開啟唯讀模式`);
+      }
+    },
+    (err) => {
+      isAtDorm = false;
+      userDistance = null;
+      updateLocationUI();
+      if (showToastMsg) showToast("未取得定位授權，已切換至唯讀模式");
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+  );
+}
+
+document.getElementById("location-badge").onclick = () => requestLocationCheck(true);
 
 /* ---------- 4. 連線與權限狀態指示 ---------- */
 const badge = document.getElementById("mode-badge");
@@ -812,7 +883,7 @@ function closeSheet(){
 }
 sheetOverlay.addEventListener("click", closeSheet);
 
-// 左下角驚嘆號按鈕事件：觸發網頁資訊與意見回報彈窗（已加入 LINE 官方帳號按鈕）
+// 左下角驚嘆號按鈕事件：觸發網頁資訊與意見回報彈窗
 document.getElementById("info-fab-btn").onclick = () => {
   showAlertModal(
     "關於「洗好沒」",
@@ -820,7 +891,7 @@ document.getElementById("info-fab-btn").onclick = () => {
 本平台為個人獨立開發之宿舍洗衣房即時狀態看板，提供倒數與狀態同步功能。
 
 <b>⚠️ 免責聲明</b>
-本平台為個人獨立開發輔助工具，與任何學校或宿舍官方管理單位無關。
+本平台為個人獨立開發輔助工具，與任何學校或宿舍管理單位無關。
 
 <b>💬 最新資訊與問題回報</b>
 若在使用過程中遇到倒數不準、系統異常或有任何功能建議，歡迎點擊下方按鈕前往 LINE 官方帳號進行回報！
@@ -915,13 +986,14 @@ function render(){
   }
 }
 
-/* ---------- 9. 彈窗與權限校驗 ---------- */
+/* ---------- 9. 彈窗與雙重權限校驗（戶別一致 + GPS 250m二宿範圍） ---------- */
 function openSheetFor(m){
   const d = machinesData[m.id] || emptyMachine(m.type);
   sheetTitle.textContent = `${m.label} (${m.typeLabel})`;
   sheetActions.innerHTML = "";
 
-  const canControl = (viewBuilding === userBuilding);
+  // 必須同時滿足「定位在 250m 二宿範圍內」與「查看戶別等於登記戶別」才開放控制權
+  const canControl = (viewBuilding === userBuilding) && isAtDorm;
   
   const now = getNow();
   let currentStatus = d.status;
@@ -929,8 +1001,14 @@ function openSheetFor(m){
     currentStatus = "finished";
   }
 
-  if (!canControl) {
-    sheetSubtitle.textContent = `⚠️ 您登記為 ${userBuilding ? userBuilding.replace('_building','') + '棟' : ''}，僅能瀏覽此機台`;
+  const userCodeStr = userBuilding ? userBuilding.replace('_building','') + '戶' : '';
+  const viewCodeStr = viewBuilding ? viewBuilding.replace('_building','') + '戶' : '';
+
+  if (!isAtDorm) {
+    const distText = userDistance !== null ? ` (距離約 ${userDistance} 公尺)` : "";
+    sheetSubtitle.textContent = `📍 您目前未在 250m 二宿範圍內${distText}，開啟唯讀模式`;
+  } else if (viewBuilding !== userBuilding) {
+    sheetSubtitle.textContent = `⚠️ 您登記為 ${userCodeStr}，僅能瀏覽 ${viewCodeStr} 機台`;
   } else if (currentStatus === "idle"){
     sheetSubtitle.textContent = `將以 ${userRoom} 房號啟動機台：`;
   } else if (currentStatus === "running"){
@@ -1023,7 +1101,7 @@ setInterval(() => {
   render();
 }, 1000);
 
-/* ---------- 11. 17 棟別選擇與房號正則嚴格比對 ---------- */
+/* ---------- 11. 17 大棟別選單與房號自動解析 ---------- */
 function switchViewBuilding(bId){
   viewBuilding = bId;
   updateStatus(navigator.onLine);
@@ -1039,7 +1117,7 @@ function updateTopProfileDisplay(){
   }
 }
 
-let tempSelectedBuilding = userBuilding || "A_building";
+let tempSelectedBuilding = "A_building";
 const bSelectGrid = document.getElementById("b-select-grid");
 const prefixBadge = document.getElementById("prefix-badge");
 
@@ -1073,15 +1151,20 @@ function validateAndParseRoom(rawInput, selectedBId){
   const isValid = /^[1-2][1-5][1-6]-[1-2]$/.test(val);
   if (!isValid) return null;
 
+  // 由棟別代碼 (如 A) 與房號首字 (1 或 2) 動態組合出獨立 Firebase 節點 (如 A1_building)
   const bCode = selectedBId.replace('_building', '');
-  return `${bCode}${val}`;
+  const unitNum = val.charAt(0);
+  return {
+    buildingId: `${bCode}${unitNum}_building`,
+    fullRoomStr: `${bCode}${val}`
+  };
 }
 
 document.getElementById("save-profile-btn").onclick = () => {
   const roomInputVal = document.getElementById("room-input").value;
-  const fullRoomStr = validateAndParseRoom(roomInputVal, tempSelectedBuilding);
+  const result = validateAndParseRoom(roomInputVal, tempSelectedBuilding);
   
-  if (!fullRoomStr) {
+  if (!result) {
     showAlertModal(
       "房號格式不正確！", 
       "請輸入正確房號<br>例：111-1"
@@ -1089,8 +1172,8 @@ document.getElementById("save-profile-btn").onclick = () => {
     return;
   }
 
-  userBuilding = tempSelectedBuilding;
-  userRoom     = fullRoomStr;
+  userBuilding = result.buildingId;
+  userRoom     = result.fullRoomStr;
 
   localStorage.setItem(LS_BUILDING, userBuilding);
   localStorage.setItem(LS_ROOM, userRoom);
@@ -1102,17 +1185,24 @@ document.getElementById("save-profile-btn").onclick = () => {
 };
 
 document.getElementById("switch-building-btn").onclick = () => {
-  tempSelectedBuilding = userBuilding || "A_building";
+  if (userBuilding) {
+    const baseCode = userBuilding.replace(/[12]?_building$/, '');
+    tempSelectedBuilding = `${baseCode}_building`;
+  } else {
+    tempSelectedBuilding = "A_building";
+  }
+
   if (userRoom) {
-    const code = tempSelectedBuilding.replace('_building', '');
-    document.getElementById("room-input").value = userRoom.startsWith(code) ? userRoom.replace(code, '') : userRoom;
+    document.getElementById("room-input").value = userRoom.replace(/^[A-Z]+/, '');
   }
   renderBuildingSelectBtns();
   document.getElementById("profile-screen").hidden = false;
 };
 
-// 系統初始化
+// 系統初始化與自動請求位置
 renderBuildingSelectBtns();
+requestLocationCheck(false);
+
 if (userBuilding && userRoom) {
   updateTopProfileDisplay();
   switchViewBuilding(userBuilding);
