@@ -410,7 +410,7 @@ html, body {
 .btn-secondary { background: #f1f5f9; color: var(--text-main); border: 1px solid var(--border-color); }
 .btn-danger { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; }
 
-/* 螢幕正中央通用 Alert / Info 彈窗 */
+/* 螢幕正中央通用 Alert / Confirm 彈窗 */
 .custom-alert-overlay {
   position: absolute; inset: 0; background: rgba(15, 23, 42, 0.5);
   backdrop-filter: blur(4px); z-index: 400; opacity: 0; pointer-events: none;
@@ -435,12 +435,21 @@ html, body {
 }
 .custom-alert-title { font-size: 17px; font-weight: 900; color: #0f172a; }
 .custom-alert-body { font-size: 13px; font-weight: 600; color: #475569; line-height: 1.55; white-space: pre-line; text-align: left; }
+
+.modal-actions { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 4px; }
 .custom-alert-btn {
   width: 100%; height: 42px; background: #2563eb; color: #ffffff;
-  border: none; border-radius: 12px; font-size: 15px; font-weight: 800; cursor: pointer;
+  border: none; border-radius: 12px; font-size: 13px; font-weight: 800; cursor: pointer;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+  transition: transform 0.12s ease;
 }
 .custom-alert-btn:active { transform: scale(0.98); }
+.custom-alert-btn.btn-secondary-modal {
+  background: #eff6ff; color: #2563eb; border: 1.5px solid #bfdbfe; box-shadow: none;
+}
+.custom-alert-btn.btn-cancel {
+  background: #f1f5f9; color: #475569; box-shadow: none; border: 1.5px solid #cbd5e1;
+}
 
 /* LINE 官方帳號按鈕樣式 */
 .btn-line {
@@ -563,7 +572,7 @@ html, body {
       </div>
     </div>
     <div class="topbar-right">
-      <span class="badge location-off" id="location-badge" style="cursor:pointer;" title="點擊重新定位">📍 定位中...</span>
+      <span class="badge location-off" id="location-badge" style="cursor:pointer;" title="點擊切換定位與通知設定">📍 點擊定位</span>
       <span class="badge" id="mode-badge">
         <span class="status-dot"></span>
         <span class="status-text">連線</span>
@@ -594,12 +603,14 @@ html, body {
     <div class="sheet-actions" id="sheet-actions"></div>
   </div>
 
-  <!-- 自訂螢幕正中央通用 Alert / Info 彈窗 -->
+  <!-- 自訂螢幕正中央通用 Alert / Confirm 彈窗 -->
   <div class="custom-alert-overlay" id="custom-alert-overlay"></div>
   <div class="custom-alert-modal" id="custom-alert-modal">
     <div class="custom-alert-title" id="custom-alert-title">提示訊息</div>
     <div class="custom-alert-body" id="custom-alert-body">內容</div>
-    <button class="custom-alert-btn" id="custom-alert-btn">確定</button>
+    <div class="modal-actions" id="modal-actions">
+      <button class="custom-alert-btn" id="custom-alert-btn">確定</button>
+    </div>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -687,12 +698,12 @@ const TIME_OPTIONS = {
     { label: "投入 15 元", minutes: 9 }
   ]
 };
-const OVERTIME_MS = 15 * 60 * 1000;
 const LS_BUILDING = "laundry_user_building";
 const LS_ROOM     = "laundry_user_room";
+const LS_LOC_PREF = "laundry_loc_pref"; // remember_allow | always | remember_deny
 const LS_DEMO_DB  = "laundry_demo_db";
 
-/* ---------- 3. 伺服器時間與 GPS 定位校驗邏輯 ---------- */
+/* ---------- 3. 伺服器時間與 GPS 兩階段偏好控制 ---------- */
 let serverTimeOffset = 0;
 let userBuilding = localStorage.getItem(LS_BUILDING) || null;
 let userRoom     = localStorage.getItem(LS_ROOM) || null;
@@ -721,11 +732,12 @@ function updateLocationUI(){
     locBadge.textContent = "📍 二宿內";
   } else {
     locBadge.className = "badge location-off";
-    locBadge.textContent = userDistance !== null ? `📍 離二宿${userDistance}m(唯讀)` : "📍 未在二宿(唯讀)";
+    locBadge.textContent = userDistance !== null ? `📍 離二宿${userDistance}m(唯讀)` : "📍 未定位(唯讀)";
   }
 }
 
-function requestLocationCheck(showToastMsg = true){
+// 實際調用系統原生 GPS 經緯度 API
+function executeGeolocationFetch(showToastMsg = true){
   const locBadge = document.getElementById("location-badge");
   if (locBadge) locBadge.textContent = "📍 定位中...";
 
@@ -757,7 +769,69 @@ function requestLocationCheck(showToastMsg = true){
   );
 }
 
-document.getElementById("location-badge").onclick = () => requestLocationCheck(true);
+// 兩階段存取：根據使用者記錄的偏好進行檢查與自動彈窗
+function promptLocationPermission(forcePrompt = false){
+  const pref = localStorage.getItem(LS_LOC_PREF);
+
+  // 若使用者點選過「記住允許」，且非手動強制點擊，頁面加載即自動靜默定位
+  if (!forcePrompt && pref === "remember_allow") {
+    executeGeolocationFetch(false);
+    return;
+  }
+
+  // 若使用者點選過「記住拒絕」，且非手動強制點擊，直接進入唯讀模式
+  if (!forcePrompt && pref === "remember_deny") {
+    isAtDorm = false;
+    updateLocationUI();
+    return;
+  }
+
+  // 否則（包含 pref === 'always' 或第一次進入），剛開網頁即跳出選擇彈窗
+  showLocationChoiceModal(forcePrompt);
+}
+
+function showLocationChoiceModal(isManualTrigger = false){
+  alertTitle.textContent = "📍 存取位置資訊與通知設定";
+  alertBody.innerHTML = `
+    系統即將提取您的 GPS 經緯度，以驗證您是否在<b>朝陽二宿 250 公尺範圍內</b>。<br>
+    <span style="font-size:12px; color:#64748b;">• 僅用於解鎖機台操作權限，絕不紀錄個人軌跡。</span>
+  `;
+
+  modalActions.innerHTML = `
+    <button class="custom-alert-btn" id="btn-loc-remember">同意定位（記住選擇，下次不詢問）</button>
+    <button class="custom-alert-btn btn-secondary-modal" id="btn-loc-always">同意定位（每次開啟都詢問）</button>
+    <button class="custom-alert-btn btn-cancel" id="btn-loc-deny">暫不定位（唯讀模式）</button>
+  `;
+
+  document.getElementById("btn-loc-remember").onclick = () => {
+    closeAlertModal();
+    localStorage.setItem(LS_LOC_PREF, "remember_allow");
+    executeGeolocationFetch(true);
+  };
+
+  document.getElementById("btn-loc-always").onclick = () => {
+    closeAlertModal();
+    localStorage.setItem(LS_LOC_PREF, "always");
+    executeGeolocationFetch(true);
+  };
+
+  document.getElementById("btn-loc-deny").onclick = () => {
+    closeAlertModal();
+    if (!isManualTrigger) {
+      localStorage.setItem(LS_LOC_PREF, "remember_deny");
+    } else {
+      localStorage.setItem(LS_LOC_PREF, "always");
+    }
+    isAtDorm = false;
+    updateLocationUI();
+    showToast("已切換至唯讀模式");
+  };
+
+  alertOverlay.classList.add("active");
+  alertModal.classList.add("active");
+}
+
+document.getElementById("location-badge").onclick = () => promptLocationPermission(true);
 
 /* ---------- 4. 連線與權限狀態指示 ---------- */
 const badge = document.getElementById("mode-badge");
@@ -776,7 +850,7 @@ function updateStatus(isOnline){
 window.addEventListener("online", () => updateStatus(true));
 window.addEventListener("offline", () => updateStatus(false));
 
-/* ---------- 5. 後端連線適配器 ---------- */
+/* ---------- 5. 後端連線適配器 (含 logs 日誌紀錄) ---------- */
 function emptyMachine(type){ return { type, status: "idle", startTime: 0, duration: 0, endTime: 0, room: "" }; }
 
 function createDemoBackend(){
@@ -794,18 +868,18 @@ function createDemoBackend(){
       const all = readAll(); all[bId] = all[bId] || {};
       all[bId][mId] = { ...(all[bId][mId] || emptyMachine(mId.startsWith("spin")?"spinner":mId.startsWith("dry")?"dryer":"washer")), ...fields };
       writeAll(all);
-    }
+    },
+    logUsage(){}
   };
 }
 
 async function createFirebaseBackend(){
   const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
-  const { getDatabase, ref, onValue, update } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
+  const { getDatabase, ref, onValue, update, push } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
   const { initializeAppCheck, ReCaptchaEnterpriseProvider } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js");
 
   const app = initializeApp(firebaseConfig);
 
-  // 啟用 Google Cloud Fraud Defense (reCAPTCHA Enterprise) 保護
   try {
     initializeAppCheck(app, {
       provider: new ReCaptchaEnterpriseProvider('YOUR_RECAPTCHA_ENTERPRISE_SITE_KEY'),
@@ -827,11 +901,23 @@ async function createFirebaseBackend(){
       if (unsubscribe) unsubscribe();
       unsubscribe = onValue(ref(db, bId), (snap) => cb(snap.val()));
     },
-    write(bId, mId, fields){ update(ref(db, `${bId}/${mId}`), fields); }
+    write(bId, mId, fields){ update(ref(db, `${bId}/${mId}`), fields); },
+    logUsage(bId, mId, room, durationSec){
+      const logRef = ref(db, "logs");
+      const now = new Date(getNow());
+      push(logRef, {
+        building: bId,
+        room: room,
+        machine: mId,
+        durationMin: Math.round(durationSec / 60),
+        timestamp: getNow(),
+        timeString: now.toLocaleString("zh-TW", { timeZone: "Asia/Taipei" })
+      });
+    }
   };
 }
 
-/* ---------- 6. 全域變數與彈窗控制 ---------- */
+/* ---------- 6. 全域變數與通用 Modal 彈窗控制 ---------- */
 let backend;
 try {
   backend = FIREBASE_READY ? await createFirebaseBackend() : createDemoBackend();
@@ -850,26 +936,27 @@ const sheetSubtitle = document.getElementById("sheet-subtitle");
 const sheetActions = document.getElementById("sheet-actions");
 const toast = document.getElementById("toast");
 
-// 置中通用 Alert / Info 彈窗
+// 置中通用 Modal 彈窗
 const alertOverlay = document.getElementById("custom-alert-overlay");
 const alertModal   = document.getElementById("custom-alert-modal");
 const alertTitle   = document.getElementById("custom-alert-title");
 const alertBody    = document.getElementById("custom-alert-body");
-const alertBtn     = document.getElementById("custom-alert-btn");
-
-function showAlertModal(title, message){
-  alertTitle.textContent = title;
-  alertBody.innerHTML    = message;
-  alertOverlay.classList.add("active");
-  alertModal.classList.add("active");
-}
+const modalActions = document.getElementById("modal-actions");
 
 function closeAlertModal(){
   alertOverlay.classList.remove("active");
   alertModal.classList.remove("active");
 }
 
-alertBtn.addEventListener("click", closeAlertModal);
+function showAlertModal(title, message){
+  alertTitle.textContent = title;
+  alertBody.innerHTML    = message;
+  modalActions.innerHTML = `<button class="custom-alert-btn" id="modal-ok-btn">確定</button>`;
+  document.getElementById("modal-ok-btn").onclick = closeAlertModal;
+  alertOverlay.classList.add("active");
+  alertModal.classList.add("active");
+}
+
 alertOverlay.addEventListener("click", closeAlertModal);
 
 function showToast(msg){
@@ -1085,6 +1172,11 @@ function startMachine(mId, seconds){
     endTime: now + seconds * 1000,
     room: userRoom || "未登記"
   });
+
+  // 同步寫入一筆使用歷史紀錄至 logs 節點
+  if (backend.logUsage) {
+    backend.logUsage(viewBuilding, mId, userRoom || "未登記", seconds);
+  }
 }
 
 function addSpinTime(mId){
@@ -1151,7 +1243,6 @@ function validateAndParseRoom(rawInput, selectedBId){
   const isValid = /^[1-2][1-5][1-6]-[1-2]$/.test(val);
   if (!isValid) return null;
 
-  // 由棟別代碼 (如 A) 與房號首字 (1 或 2) 動態組合出獨立 Firebase 節點 (如 A1_building)
   const bCode = selectedBId.replace('_building', '');
   const unitNum = val.charAt(0);
   return {
@@ -1199,9 +1290,9 @@ document.getElementById("switch-building-btn").onclick = () => {
   document.getElementById("profile-screen").hidden = false;
 };
 
-// 系統初始化與自動請求位置
+// 系統初始化：加載 UI 並立即啟動定位通知流程
 renderBuildingSelectBtns();
-requestLocationCheck(false);
+updateLocationUI();
 
 if (userBuilding && userRoom) {
   updateTopProfileDisplay();
@@ -1209,6 +1300,9 @@ if (userBuilding && userRoom) {
 } else {
   document.getElementById("profile-screen").hidden = false;
 }
+
+// 剛進入網頁即跳出定位與通知提示彈窗
+promptLocationPermission(false);
 </script>
 </body>
 </html>
