@@ -632,7 +632,7 @@ html, body {
   <!-- 身份設定面板 -->
   <div class="screen" id="profile-screen" hidden>
     <h2>歡迎使用 洗好沒</h2>
-    <p>請先點選您的棟別，並輸入戶樓號床（例：111-1）</p>
+    <p>請先點選您的棟別，並輸入戶樓號房號</p>
     
     <div class="form-group">
       <label class="form-label">1. 選擇住宿棟別</label>
@@ -640,7 +640,7 @@ html, body {
     </div>
 
     <div class="form-group">
-      <label class="form-label">2. 輸入戶樓號-床 (例：111-1)</label>
+      <label class="form-label" id="room-input-label">2. 輸入戶樓號-床 (例：111-1)</label>
       <div class="input-with-prefix">
         <span class="prefix-badge" id="prefix-badge">A 棟</span>
         <input type="text" class="form-input" id="room-input" placeholder="111-1" maxlength="6">
@@ -1281,28 +1281,59 @@ function renderBuildingSelectBtns(){
 
   const currB = BUILDINGS.find(b=>b.id===tempSelectedBuilding);
   prefixBadge.textContent = `${currB ? currB.code : 'A'} 棟`;
+
+  // 動態切換房號輸入欄位提示與驗證長度
+  const roomLabel = document.getElementById("room-input-label");
+  const roomInput = document.getElementById("room-input");
+  if (currB && currB.isTianWei) {
+    if (roomLabel) roomLabel.textContent = "2. 輸入戶樓號 (例：111)";
+    if (roomInput) {
+      roomInput.placeholder = "111";
+      roomInput.maxLength = 4;
+    }
+  } else {
+    if (roomLabel) roomLabel.textContent = "2. 輸入戶樓號-床 (例：111-1)";
+    if (roomInput) {
+      roomInput.placeholder = "111-1";
+      roomInput.maxLength = 6;
+    }
+  }
 }
 
-// 嚴格驗證 [戶1-2][樓1-5][號1-6]-[床1-2] (例: 111-1)
+// 驗證與解析房號（動態判定是否為天威智生活）
 function validateAndParseRoom(rawInput, selectedBId){
   let val = rawInput.trim();
-  
-  // 自動容錯：若輸入 1111 自動幫補橫線變 111-1
-  if (/^[1-2][1-5][1-6][1-2]$/.test(val)) {
-    val = `${val.slice(0, 3)}-${val.slice(3)}`;
-    document.getElementById("room-input").value = val;
+  const currB = BUILDINGS.find(b => b.id === selectedBId);
+  const isTianWei = currB ? currB.isTianWei : false;
+
+  if (isTianWei) {
+    // 天威智生活 (M, N, U, T)：僅 3~4 位數字房號，無床號 (-1 / -2)
+    const isValid = /^[1-2][1-5][1-6]$/.test(val) || /^\d{3,4}$/.test(val);
+    if (!isValid) return null;
+
+    const bCode = selectedBId.replace('_building', '');
+    const unitNum = val.charAt(0);
+    return {
+      buildingId: `${bCode}${unitNum}_building`,
+      fullRoomStr: `${bCode}${val}`
+    };
+  } else {
+    // 第二宿舍：需包含床號 (例: 111-1)
+    if (/^[1-2][1-5][1-6][1-2]$/.test(val)) {
+      val = `${val.slice(0, 3)}-${val.slice(3)}`;
+      document.getElementById("room-input").value = val;
+    }
+
+    const isValid = /^[1-2][1-5][1-6]-[1-2]$/.test(val);
+    if (!isValid) return null;
+
+    const bCode = selectedBId.replace('_building', '');
+    const unitNum = val.charAt(0);
+    return {
+      buildingId: `${bCode}${unitNum}_building`,
+      fullRoomStr: `${bCode}${val}`
+    };
   }
-
-  // 嚴格正則比對：[戶1-2][樓1-5][號1-6]-[床1-2]
-  const isValid = /^[1-2][1-5][1-6]-[1-2]$/.test(val);
-  if (!isValid) return null;
-
-  const bCode = selectedBId.replace('_building', '');
-  const unitNum = val.charAt(0);
-  return {
-    buildingId: `${bCode}${unitNum}_building`,
-    fullRoomStr: `${bCode}${val}`
-  };
 }
 
 document.getElementById("save-profile-btn").onclick = () => {
@@ -1310,9 +1341,11 @@ document.getElementById("save-profile-btn").onclick = () => {
   const result = validateAndParseRoom(roomInputVal, tempSelectedBuilding);
   
   if (!result) {
+    const currB = BUILDINGS.find(b => b.id === tempSelectedBuilding);
+    const exampleStr = (currB && currB.isTianWei) ? "請輸入正確房號<br>例：111" : "請輸入正確房號<br>例：111-1";
     showAlertModal(
       "房號格式不正確！", 
-      "請輸入正確房號<br>例：111-1"
+      exampleStr
     );
     return;
   }
