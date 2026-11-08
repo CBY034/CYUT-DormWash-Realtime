@@ -520,11 +520,25 @@ html, body {
 }
 .form-input:focus { border-color: #2563eb; }
 
-/* 17 棟別響應式多欄網格 */
-.building-select-grid {
+/* 棟別分類選單容器（完全展開無內部捲軸） */
+.building-select-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 2px;
+}
+.building-category-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: #475569;
+  margin-top: 4px;
+}
+.building-subgrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
-  gap: 6px; width: 100%; max-height: 180px; overflow-y: auto; padding: 2px;
+  grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+  gap: 6px;
+  width: 100%;
 }
 .btn-select-b {
   height: 38px; border-radius: 8px; border: 2px solid var(--border-color);
@@ -622,7 +636,7 @@ html, body {
     
     <div class="form-group">
       <label class="form-label">1. 選擇住宿棟別</label>
-      <div class="building-select-grid" id="b-select-grid"></div>
+      <div class="building-select-container" id="b-select-container"></div>
     </div>
 
     <div class="form-group">
@@ -651,10 +665,15 @@ const firebaseConfig = {
 };
 const FIREBASE_READY = firebaseConfig.apiKey !== "";
 
-/* ---------- 2. 17 大棟別設定與 GPS 地理圍欄 (250m) ---------- */
+/* ---------- 2. 棟別設定與 GPS 地理圍欄 (250m) ---------- */
 const BUILDINGS = [
-  "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "O", "Q", "R", "S"
-].map(code => ({ id: `${code}_building`, code, label: `${code} 棟` }));
+  "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "Q", "R", "S", "T", "U"
+].map(code => ({
+  id: `${code}_building`,
+  code,
+  label: `${code} 棟`,
+  isTianWei: ["M", "N", "U", "T"].includes(code)
+}));
 
 // 朝陽科技大學 第二宿舍 GPS 座標與 250 公尺半徑限制
 const DORM2_LAT = 24.06024;
@@ -1193,7 +1212,7 @@ setInterval(() => {
   render();
 }, 1000);
 
-/* ---------- 11. 17 大棟別選單與房號自動解析 ---------- */
+/* ---------- 11. 棟別選單（分類呈現）與房號自動解析 ---------- */
 function switchViewBuilding(bId){
   viewBuilding = bId;
   updateStatus(navigator.onLine);
@@ -1210,12 +1229,25 @@ function updateTopProfileDisplay(){
 }
 
 let tempSelectedBuilding = "A_building";
-const bSelectGrid = document.getElementById("b-select-grid");
+const bSelectContainer = document.getElementById("b-select-container");
 const prefixBadge = document.getElementById("prefix-badge");
 
 function renderBuildingSelectBtns(){
-  bSelectGrid.innerHTML = "";
-  for (const b of BUILDINGS){
+  if (!bSelectContainer) return;
+  bSelectContainer.innerHTML = "";
+
+  const dorm2List = BUILDINGS.filter(b => !b.isTianWei);
+  const tianweiList = BUILDINGS.filter(b => b.isTianWei);
+
+  // 第二宿舍區塊
+  const gLabel = document.createElement("div");
+  gLabel.className = "building-category-label";
+  gLabel.textContent = "第二宿舍";
+  bSelectContainer.appendChild(gLabel);
+
+  const gGrid = document.createElement("div");
+  gGrid.className = "building-subgrid";
+  for (const b of dorm2List){
     const btn = document.createElement("button");
     btn.className = `btn-select-b ${tempSelectedBuilding === b.id ? 'active' : ''}`;
     btn.textContent = b.code;
@@ -1223,8 +1255,30 @@ function renderBuildingSelectBtns(){
       tempSelectedBuilding = b.id;
       renderBuildingSelectBtns();
     };
-    bSelectGrid.appendChild(btn);
+    gGrid.appendChild(btn);
   }
+  bSelectContainer.appendChild(gGrid);
+
+  // 天威智生活區塊
+  const twLabel = document.createElement("div");
+  twLabel.className = "building-category-label";
+  twLabel.textContent = "天威智生活";
+  bSelectContainer.appendChild(twLabel);
+
+  const twGrid = document.createElement("div");
+  twGrid.className = "building-subgrid";
+  for (const b of tianweiList){
+    const btn = document.createElement("button");
+    btn.className = `btn-select-b ${tempSelectedBuilding === b.id ? 'active' : ''}`;
+    btn.textContent = b.code;
+    btn.onclick = () => {
+      tempSelectedBuilding = b.id;
+      renderBuildingSelectBtns();
+    };
+    twGrid.appendChild(btn);
+  }
+  bSelectContainer.appendChild(twGrid);
+
   const currB = BUILDINGS.find(b=>b.id===tempSelectedBuilding);
   prefixBadge.textContent = `${currB ? currB.code : 'A'} 棟`;
 }
